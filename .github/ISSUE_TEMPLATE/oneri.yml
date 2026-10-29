@@ -1,0 +1,15 @@
+name: Özellik önerisi
+description: Rampa'ya eklenmesini istediğiniz bir şey önerin
+labels: [öneri]
+body:
+  - type: textarea
+    id: sorun
+    attributes:
+      label: Hangi sorunu çözüyor?
+      description: Depoda veya sevkiyatta yaşadığınız durumu anlatın.
+    validations:
+      required: true
+  - type: textarea
+    id: oneri
+    attributes:
+      label: Önerdiğiniz çözüm

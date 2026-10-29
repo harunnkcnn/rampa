@@ -1,0 +1,89 @@
+@import "tailwindcss";
+
+/* Renkler değişken olarak tanımlı; koyu temada yalnızca değerleri değişir */
+:root {
+  --rampa-bg: #f2f1ec;
+  --rampa-surface: #ffffff;
+  --rampa-ink: #1b1d1f;
+  --rampa-muted: #62676c;
+  --rampa-line: #dcd9d0;
+  --rampa-field: #f2f1ec;
+  --rampa-crit: #c62828;
+  --rampa-crit-soft: #fde7e7;
+  --rampa-low: #a15c00;
+  --rampa-low-soft: #fff0d9;
+  --rampa-ok: #2e7d32;
+  --rampa-ok-soft: #e5f3e6;
+  --rampa-info: #1f5fa8;
+  --rampa-info-soft: #e3eefb;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --rampa-bg: #121314;
+    --rampa-surface: #1c1e20;
+    --rampa-ink: #ecebe6;
+    --rampa-muted: #a3a7ab;
+    --rampa-line: #2f3235;
+    --rampa-field: #141516;
+    --rampa-crit: #ff6b6b;
+    --rampa-crit-soft: #3a1d1d;
+    --rampa-low: #ffb84d;
+    --rampa-low-soft: #3a2a12;
+    --rampa-ok: #6fcf73;
+    --rampa-ok-soft: #173018;
+    --rampa-info: #7fb2f0;
+    --rampa-info-soft: #16263a;
+    color-scheme: dark;
+  }
+}
+
+@theme inline {
+  --color-bg: var(--rampa-bg);
+  --color-surface: var(--rampa-surface);
+  --color-ink: var(--rampa-ink);
+  --color-muted: var(--rampa-muted);
+  --color-line: var(--rampa-line);
+  --color-field: var(--rampa-field);
+  --color-crit: var(--rampa-crit);
+  --color-crit-soft: var(--rampa-crit-soft);
+  --color-low: var(--rampa-low);
+  --color-low-soft: var(--rampa-low-soft);
+  --color-ok: var(--rampa-ok);
+  --color-ok-soft: var(--rampa-ok-soft);
+  --color-info: var(--rampa-info);
+  --color-info-soft: var(--rampa-info-soft);
+}
+
+@theme {
+  --color-safety: #f5b800;
+  --color-asphalt: #1b1d1f;
+  --font-head: "Barlow Condensed", "Arial Narrow", system-ui, sans-serif;
+  --font-sans: "Barlow", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+@layer base {
+  body {
+    @apply bg-bg text-ink font-sans antialiased;
+    padding-bottom: calc(76px + env(safe-area-inset-bottom));
+  }
+  h1, h2, h3 {
+    @apply font-head font-bold uppercase tracking-wide;
+  }
+  input, select, textarea {
+    @apply h-12 w-full min-w-0 rounded-lg border border-line bg-field px-3 text-ink;
+  }
+  :focus-visible {
+    outline: 3px solid var(--color-safety);
+    outline-offset: 2px;
+  }
+  dialog::backdrop {
+    background: rgb(0 0 0 / 0.45);
+  }
+}
+
+@utility hazard-stripe {
+  background: repeating-linear-gradient(-45deg, var(--color-safety) 0 12px, var(--color-asphalt) 12px 24px);
+}

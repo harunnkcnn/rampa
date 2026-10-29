@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-audit --no-fund
+      - name: Tip kontrolü
+        run: npm run typecheck
+      - name: Testler
+        run: npm test
+      - name: Derleme
+        run: npm run build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rampa
+          path: dist/index.html
+
+  publish:
+    # Derlenen tek dosyayı gh-pages dalına koyar: canlı demo ve indirme bağlantısı buradan beslenir
+    if: github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: rampa
+          path: site
+      - name: gh-pages dalına yayınla
+        working-directory: site
+        run: |
+          touch .nojekyll
+          git init -q -b gh-pages
+          git config user.name "Harun Kaçan"
+          git config user.email "harunnkcnn@gmail.com"
+          git add -A
+          git commit -q -m "Yayın: ${GITHUB_SHA::7}"
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" gh-pages

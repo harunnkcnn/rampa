@@ -1,0 +1,49 @@
+name: Release
+
+# package.json'daki sürüm için henüz bir GitHub Release yoksa,
+# CHANGELOG.md'deki notlarla otomatik oluşturur.
+on:
+  push:
+    branches: [main]
+    paths: [package.json, CHANGELOG.md]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Sürümü belirle
+        id: v
+        run: echo "tag=v$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+      - name: Sürüm zaten var mı?
+        id: exists
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "${{ steps.v.outputs.tag }}" >/dev/null 2>&1; then echo "yes=true" >> "$GITHUB_OUTPUT"; else echo "yes=false" >> "$GITHUB_OUTPUT"; fi
+      - name: Derle
+        if: steps.exists.outputs.yes == 'false'
+        run: npm install --no-audit --no-fund && npm run build && cp dist/index.html rampa.html
+      - name: Sürüm notlarını CHANGELOG'dan çıkar
+        if: steps.exists.outputs.yes == 'false'
+        run: |
+          VERSION="${{ steps.v.outputs.tag }}"
+          awk -v v="${VERSION#v}" '
+            $0 ~ "^## \\[" v "\\]" {on=1; next}
+            on && /^## \[/ {exit}
+            on && /^\[[^]]+\]: / {next}
+            on {print}
+          ' CHANGELOG.md > notes.md
+          printf '\n**Canlı demo:** https://harunnkcnn.github.io/rampa/\n\n`rampa.html` dosyasını indirip tarayıcıda açarak kurulumsuz kullanabilirsiniz.\n' >> notes.md
+      - name: Release oluştur
+        if: steps.exists.outputs.yes == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "${{ steps.v.outputs.tag }}" rampa.html --title "Rampa ${{ steps.v.outputs.tag }}" --notes-file notes.md --target "${{ github.sha }}"

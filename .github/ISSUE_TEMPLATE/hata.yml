@@ -1,0 +1,22 @@
+name: Hata bildirimi
+description: Beklendiği gibi çalışmayan bir şey bildirin
+labels: [hata]
+body:
+  - type: textarea
+    id: ne-oldu
+    attributes:
+      label: Ne oldu?
+      description: Hangi ekrandaydınız, ne yaptınız ve ne gördünüz?
+    validations:
+      required: true
+  - type: textarea
+    id: beklenen
+    attributes:
+      label: Ne bekliyordunuz?
+    validations:
+      required: true
+  - type: input
+    id: cihaz
+    attributes:
+      label: Cihaz ve tarayıcı
+      placeholder: örn. Android, Chrome 130
