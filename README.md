@@ -16,9 +16,9 @@
 
 <p align="center">
   <a href="https://harunnkcnn.github.io/rampa/"><b>▶ Canlı demo</b></a> ·
-  <a href="#user-content-kurulum">Kurulum</a> ·
-  <a href="#user-content-rampa-pro">Pro sürüm</a> ·
-  <a href="#user-content-english">English</a>
+  <a href="https://github.com/harunnkcnn/rampa/releases/latest"><b>⬇ İndir</b></a> ·
+  <a href="mailto:harunnkcnn@gmail.com?subject=Rampa%20Pro">Pro sürüm</a> ·
+  <a href="README.en.md">English</a>
 </p>
 
 <p align="center">
@@ -50,7 +50,7 @@ Rampa bu üç adımı tek ekranda toplar. Bir sevkiyat görevlisinin rampada gö
 Kurulum gerekmez. İki yol var:
 
 1. **Tarayıcıda deneyin:** [canlı demo](https://harunnkcnn.github.io/rampa/)
-2. **Kendi bilgisayarınızda kullanın:** [rampa.html dosyasını indirin](https://github.com/harunnkcnn/rampa/raw/gh-pages/index.html) ve çift tıklayıp tarayıcıda açın. İnternet bağlantısı gerekmez.
+2. **Kendi bilgisayarınızda kullanın:** [son sürümden `rampa.html` dosyasını indirin](https://github.com/harunnkcnn/rampa/releases/latest) ve çift tıklayıp tarayıcıda açın. İnternet bağlantısı gerekmez.
 
 Bu dosya her güncellemede GitHub Actions tarafından otomatik derlenip `gh-pages` dalına konur.
 
@@ -117,7 +117,7 @@ Bu repo Rampa'nın ücretsiz, açık kaynak sürümüdür. Pro sürümde ek olar
 - Kritik stok için sipariş önerisi
 - Araç doluluk planı
 
-Pro sürüm ticari lisansla sunulur. Bilgi için [LinkedIn](https://www.linkedin.com/in/harun-ka%C3%A7an-58b423335/) üzerinden yazabilirsiniz.
+Pro sürüm ticari lisansla sunulur ve 14 gün denenebilir. Bilgi için [harunnkcnn@gmail.com](mailto:harunnkcnn@gmail.com?subject=Rampa%20Pro) adresine ya da [LinkedIn](https://www.linkedin.com/in/harun-ka%C3%A7an-58b423335/) üzerinden yazabilirsiniz.
 
 ## Lisans
 
@@ -127,6 +127,6 @@ Pro sürüm ticari lisansla sunulur. Bilgi için [LinkedIn](https://www.linkedin
 
 ## English
 
-**Rampa** is a single-file stock and shipment tracker for auto parts warehouses: parts with OEM codes and shelf addresses, stock in/out with document numbers (no negative stock), shipments that move through *Preparing → Loaded → On the road → Delivered*, and a one-tap loading list for the driver. Built with React 19, TypeScript (strict), Tailwind CSS 4 and Vite; the build output is a single self-contained `dist/index.html`, so end users need no install or server. Business rules live in `src/domain` as pure, tested functions. Data stays in the browser's local storage; use **Ayarlar → Yedek indir** for backups. UI is in Turkish. MIT licensed.
+An English version of this README is available in [README.en.md](README.en.md).
 
 <p align="center"><sub>Geliştiren: <a href="https://github.com/harunnkcnn">Harun Kaçan</a> · Tasarım ve yazılım işleri için <a href="https://www.behance.net/harunkaan1">Behance</a> · <a href="https://www.linkedin.com/in/harun-ka%C3%A7an-58b423335/">LinkedIn</a></sub></p>
