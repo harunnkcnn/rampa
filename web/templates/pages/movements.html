@@ -1,0 +1,42 @@
+{{define "content"}}
+{{$d := .Data}}
+<div class="page-head">
+  <div>
+    <h1>Hareketler</h1>
+    <p class="sub">Tüm giriş, çıkış ve sayım kayıtları. Kayıtlar silinmez; düzeltme için sayım girin.</p>
+  </div>
+  <div class="actions">
+    <a class="btn btn-quiet" href="/movements.csv{{query "kind" $d.Kind "from" $d.From "to" $d.To}}">CSV indir</a>
+  </div>
+</div>
+
+<form class="toolbar" method="get" action="/movements">
+  <div>
+    <label for="kind">Tür</label>
+    <select id="kind" name="kind">
+      <option value="">Hepsi</option>
+      <option value="in"{{if eq $d.Kind "in"}} selected{{end}}>Giriş</option>
+      <option value="out"{{if eq $d.Kind "out"}} selected{{end}}>Çıkış</option>
+      <option value="adjust"{{if eq $d.Kind "adjust"}} selected{{end}}>Sayım</option>
+    </select>
+  </div>
+  <div>
+    <label for="from">Başlangıç</label>
+    <input id="from" name="from" type="date" value="{{$d.From}}">
+  </div>
+  <div>
+    <label for="to">Bitiş</label>
+    <input id="to" name="to" type="date" value="{{$d.To}}">
+  </div>
+  <button class="btn btn-quiet" type="submit">Filtrele</button>
+</form>
+
+{{template "movement-table" (mtable $d.Movements false)}}
+
+{{if or $d.Offset $d.HasMore}}
+<nav class="actions section" aria-label="Sayfalar">
+  {{if $d.Offset}}<a class="btn btn-quiet" href="/movements{{query "kind" $d.Kind "from" $d.From "to" $d.To "offset" (printf "%d" $d.PrevPage)}}">Daha yeni</a>{{end}}
+  {{if $d.HasMore}}<a class="btn btn-quiet" href="/movements{{query "kind" $d.Kind "from" $d.From "to" $d.To "offset" (printf "%d" $d.NextPage)}}">Daha eski</a>{{end}}
+</nav>
+{{end}}
+{{end}}

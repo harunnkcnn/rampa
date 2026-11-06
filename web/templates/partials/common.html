@@ -1,0 +1,47 @@
+{{define "flash"}}{{with .}}<div class="flash flash-{{.Kind}}" role="{{if eq .Kind "error"}}alert{{else}}status{{end}}">{{.Text}}</div>{{end}}{{end}}
+
+{{define "csrf"}}<input type="hidden" name="_csrf" value="{{.CSRF}}">{{end}}
+
+{{define "kind-tag"}}<span class="tag tag-{{.}}">{{.Label}}</span>{{end}}
+
+{{define "status-tag"}}<span class="tag tag-{{.}}">{{.Label}}</span>{{end}}
+
+{{define "movement-table"}}
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th scope="col">Tarih</th>
+        {{if not .HideProduct}}<th scope="col">Ürün</th>{{end}}
+        <th scope="col">Tür</th>
+        <th scope="col" class="num">Miktar</th>
+        <th scope="col" class="hide-sm">Açıklama</th>
+        <th scope="col" class="hide-sm">Kullanıcı</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{range .Rows}}
+      <tr>
+        <td class="small">{{datetime .CreatedAt}}</td>
+        {{if not $.HideProduct}}<td><a href="/products/{{.ProductID}}">{{.ProductName}}</a> <span class="sku muted small">{{.ProductSKU}}</span></td>{{end}}
+        <td>{{template "kind-tag" .Kind}}</td>
+        <td class="num {{if gt .Qty 0}}qty-in{{else}}qty-out{{end}}">{{signed .Qty}} {{.Unit}}</td>
+        <td class="hide-sm">{{if .ShipmentID}}<a href="/shipments/{{.ShipmentID}}" class="code">{{.ShipmentCode}}</a> {{end}}{{.Note}}</td>
+        <td class="hide-sm muted">{{.UserName}}</td>
+      </tr>
+      {{else}}
+      <tr><td colspan="6" class="empty">Henüz hareket yok.</td></tr>
+      {{end}}
+    </tbody>
+  </table>
+</div>
+{{end}}
+
+{{define "field"}}
+<div{{if .Full}} class="full"{{end}}>
+  <label for="{{.Name}}">{{.Label}}</label>
+  <input id="{{.Name}}" name="{{.Name}}" type="text" value="{{.Value}}"{{if .Mode}} inputmode="{{.Mode}}"{{end}}{{if .Required}} required{{end}}{{with .Err}} aria-invalid="true" aria-describedby="{{$.Name}}-err"{{end}}>
+  {{with .Err}}<span class="field-error" id="{{$.Name}}-err">{{.}}</span>{{else}}{{with .Hint}}<span class="hint">{{.}}</span>{{end}}{{end}}
+</div>
+{{end}}
+

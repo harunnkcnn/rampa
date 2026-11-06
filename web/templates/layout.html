@@ -1,0 +1,71 @@
+{{define "layout"}}<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{.Title}} · Rampa</title>
+  <meta name="htmx-config" content='{"includeIndicatorStyles":false,"responseHandling":[{"code":"204","swap":false},{"code":"[23]..","swap":true},{"code":"422","swap":true},{"code":"[45]..","swap":false,"error":true}]}'>
+  <link rel="preload" href="/static/fonts/archivo-latin-standard-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/static/app.css?v={{.Version}}">
+  {{range .Styles}}<link rel="stylesheet" href="{{.}}?v={{$.Version}}">{{end}}
+  <link rel="icon" href="/static/icon.svg" type="image/svg+xml">
+  <script src="/static/htmx.min.js?v={{.Version}}" defer></script>
+  <script src="/static/app.js?v={{.Version}}" defer></script>
+</head>
+{{if .User}}
+<body hx-headers='{"X-CSRF-Token":"{{.CSRF}}"}'>
+  <a class="skip-link" href="#main">İçeriğe geç</a>
+  <div class="shell">
+    <header class="sidebar">
+      <a class="brand" href="/">
+        <span class="brand-name">Rampa</span>
+        <span class="brand-stripe" aria-hidden="true"></span>
+        {{with .Company}}<span class="brand-company">{{.}}</span>{{end}}
+      </a>
+      <nav class="nav" aria-label="Ana menü">
+        {{range .Nav}}
+        <div class="nav-group">
+          {{with .Title}}<p class="nav-title">{{.}}</p>{{end}}
+          <ul class="nav-list">
+            {{range .Items}}<li><a href="{{.Href}}"{{if .Active}} aria-current="page"{{end}}>{{.Label}}</a></li>{{end}}
+          </ul>
+        </div>
+        {{end}}
+      </nav>
+      <div class="sidebar-foot">
+        {{.User.Username}} ·
+        <form method="post" action="/logout">
+          <input type="hidden" name="_csrf" value="{{.CSRF}}">
+          <button class="linklike" type="submit">Çıkış yap</button>
+        </form>
+        <span class="edition">{{.Edition}} {{.Version}}</span>
+      </div>
+    </header>
+    <main class="main" id="main">
+      <div class="main-inner">
+        {{range .Notices}}
+        <div class="notice notice-{{.Kind}}" role="status">{{.Text}}{{if .Href}} <a href="{{.Href}}">{{.Link}}</a>{{end}}</div>
+        {{end}}
+        {{template "flash" .Flash}}
+        {{template "content" .}}
+      </div>
+    </main>
+  </div>
+</body>
+{{else}}
+<body>
+  <main class="auth" id="main">
+    <div class="auth-card">
+      <a class="brand" href="/">
+        <span class="brand-name">Rampa</span>
+        <span class="brand-stripe" aria-hidden="true"></span>
+        {{with .Company}}<span class="brand-company">{{.}}</span>{{end}}
+      </a>
+      {{template "flash" .Flash}}
+      {{template "content" .}}
+    </div>
+  </main>
+</body>
+{{end}}
+</html>
+{{end}}

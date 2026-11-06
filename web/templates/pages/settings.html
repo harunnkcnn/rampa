@@ -1,0 +1,66 @@
+{{define "content"}}
+<div class="page-head"><h1>Ayarlar</h1></div>
+
+<div class="grid-2">
+  <div>
+    <form method="post" action="/settings/company" class="panel form-stack">
+      {{template "csrf" .}}
+      <h2>İşletme</h2>
+      <div>
+        <label for="company">İşletme adı</label>
+        <input id="company" name="company" type="text" maxlength="80" value="{{.Val "company"}}">
+        <span class="hint">Menüde ve yazdırılan sevk belgesinde görünür.</span>
+      </div>
+      <button class="btn btn-quiet" type="submit">Kaydet</button>
+    </form>
+
+    <section class="panel" aria-labelledby="users-h">
+      <h2 id="users-h">Kullanıcılar</h2>
+      <div class="table-wrap section">
+        <table>
+          <tbody>
+            {{range .Data.Users}}
+            <tr><td>{{.Username}}</td><td class="muted small">{{if .IsAdmin}}Yönetici{{else}}Depo kullanıcısı{{end}}</td><td class="num small muted">{{date .CreatedAt}}</td></tr>
+            {{end}}
+          </tbody>
+        </table>
+      </div>
+      {{if .User.IsAdmin}}
+      <form method="post" action="/settings/users" class="form-stack section" novalidate>
+        {{template "csrf" .}}
+        <h3>Kullanıcı ekle</h3>
+        {{template "field" (fieldOf . "new_username" "Kullanıcı adı" "" "" true false)}}
+        <div>
+          <label for="new_password">Geçici parola</label>
+          <input id="new_password" name="new_password" type="password" autocomplete="new-password" minlength="10"{{with .Err "new_password"}} aria-invalid="true" aria-describedby="np-err"{{end}}>
+          {{with .Err "new_password"}}<span class="field-error" id="np-err">{{.}}</span>{{else}}<span class="hint">En az 10 karakter. Kullanıcı ilk girişte Ayarlar'dan değiştirebilir.</span>{{end}}
+        </div>
+        <label class="check"><input type="checkbox" name="new_admin" value="1"> Yönetici yetkisi ver</label>
+        <button class="btn btn-quiet" type="submit">Kullanıcıyı ekle</button>
+      </form>
+      {{end}}
+    </section>
+  </div>
+
+  <form method="post" action="/settings/password" class="panel form-stack" novalidate>
+    {{template "csrf" .}}
+    <h2>Parolamı değiştir</h2>
+    <div>
+      <label for="current">Mevcut parola</label>
+      <input id="current" name="current" type="password" autocomplete="current-password"{{with .Err "current"}} aria-invalid="true" aria-describedby="cur-err"{{end}}>
+      {{with .Err "current"}}<span class="field-error" id="cur-err">{{.}}</span>{{end}}
+    </div>
+    <div>
+      <label for="password">Yeni parola</label>
+      <input id="password" name="password" type="password" autocomplete="new-password" minlength="10"{{with .Err "password"}} aria-invalid="true" aria-describedby="pw-err"{{end}}>
+      {{with .Err "password"}}<span class="field-error" id="pw-err">{{.}}</span>{{else}}<span class="hint">En az 10 karakter.</span>{{end}}
+    </div>
+    <div>
+      <label for="password2">Yeni parola tekrar</label>
+      <input id="password2" name="password2" type="password" autocomplete="new-password"{{with .Err "password2"}} aria-invalid="true" aria-describedby="pw2-err"{{end}}>
+      {{with .Err "password2"}}<span class="field-error" id="pw2-err">{{.}}</span>{{end}}
+    </div>
+    <button class="btn" type="submit">Parolayı değiştir</button>
+  </form>
+</div>
+{{end}}

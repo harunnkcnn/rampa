@@ -1,0 +1,62 @@
+{{define "content"}}
+{{$d := .Data}}
+<div class="page-head">
+  <div>
+    <h1>Ürünler</h1>
+    <p class="sub">Stok, kritik seviye ve raf konumu.</p>
+  </div>
+  <div class="actions">
+    <a class="btn btn-quiet" href="/products.csv">CSV indir</a>
+    <a class="btn" href="/products/new">Ürün ekle</a>
+  </div>
+</div>
+
+<form class="toolbar" method="get" action="/products"
+      hx-get="/products" hx-target="#product-rows" hx-swap="outerHTML" hx-push-url="true"
+      hx-trigger="input changed delay:250ms from:#q, change from:input[type=checkbox], submit">
+  <div class="grow">
+    <label for="q">Ara</label>
+    <input id="q" name="q" type="search" value="{{$d.Query}}" placeholder="Stok kodu, ad ya da konum" autocomplete="off">
+  </div>
+  <label class="check"><input type="checkbox" name="low" value="1"{{if $d.Low}} checked{{end}}> Sadece kritik stok</label>
+  <label class="check"><input type="checkbox" name="archived" value="1"{{if $d.Archived}} checked{{end}}> Arşivi göster</label>
+  <noscript><button class="btn btn-quiet" type="submit">Filtrele</button></noscript>
+</form>
+
+{{template "product-rows" .}}
+{{end}}
+
+{{define "product-rows"}}
+{{$d := .Data}}
+<div id="product-rows" class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th scope="col">Stok kodu</th>
+        <th scope="col">Ürün</th>
+        <th scope="col" class="hide-sm">Konum</th>
+        <th scope="col" class="num">Stok</th>
+        <th scope="col" class="num hide-sm">Kritik seviye</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{range $d.Products}}
+      <tr>
+        <td class="sku">{{.SKU}}</td>
+        <td>
+          <a href="/products/{{.ID}}">{{.Name}}</a>
+          {{if .Archived}}<span class="tag tag-cancelled">Arşivde</span>{{else if .Low}}<span class="tag tag-low">Kritik</span>{{end}}
+        </td>
+        <td class="hide-sm muted">{{.Location}}</td>
+        <td class="num{{if .Low}} qty-out{{end}}">{{.Stock}} {{.Unit}}</td>
+        <td class="num hide-sm muted">{{if .MinStock}}{{.MinStock}}{{end}}</td>
+      </tr>
+      {{else}}
+      <tr><td colspan="5" class="empty">
+        {{if or $d.Query $d.Low}}Bu filtreyle eşleşen ürün yok.{{else}}Henüz ürün yok. <a href="/products/new">İlk ürünü ekleyin</a>.{{end}}
+      </td></tr>
+      {{end}}
+    </tbody>
+  </table>
+</div>
+{{end}}

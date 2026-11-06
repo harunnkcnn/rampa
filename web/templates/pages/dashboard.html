@@ -1,0 +1,75 @@
+{{define "content"}}
+{{$d := .Data}}
+<div class="page-head">
+  <div>
+    <h1>{{if .Company}}{{.Company}}{{else}}Depo özeti{{end}}</h1>
+    <p class="sub">{{date $d.Today}}</p>
+  </div>
+  <div class="actions">
+    <a class="btn btn-quiet" href="/products/new">Ürün ekle</a>
+    <a class="btn" href="/shipments">Sevkiyat aç</a>
+  </div>
+</div>
+
+<div class="statusline" role="list">
+  <div role="listitem"><strong>{{$d.Overview.ActiveProducts}}</strong><span>aktif ürün</span></div>
+  <div role="listitem"{{if $d.Overview.LowStock}} class="alert"{{end}}><strong>{{$d.Overview.LowStock}}</strong><span>kritik stokta</span></div>
+  <div role="listitem"><strong>{{$d.Overview.TodayIn}}</strong><span>bugün giriş</span></div>
+  <div role="listitem"><strong>{{$d.Overview.TodayOut}}</strong><span>bugün çıkış</span></div>
+  <div role="listitem"><strong>{{$d.Overview.OpenShipments}}</strong><span>açık sevkiyat</span></div>
+</div>
+
+<div class="grid-2">
+  <section class="section" aria-labelledby="low-h">
+    <div class="section-head">
+      <h2 id="low-h">Kritik stok</h2>
+      <a href="/products?low=1">Tümünü gör</a>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th scope="col">Ürün</th><th scope="col" class="num">Stok</th><th scope="col" class="num">Kritik seviye</th></tr></thead>
+        <tbody>
+          {{range $d.Low}}
+          <tr>
+            <td><a href="/products/{{.ID}}">{{.Name}}</a> <span class="sku muted small">{{.SKU}}</span></td>
+            <td class="num qty-out">{{.Stock}} {{.Unit}}</td>
+            <td class="num muted">{{.MinStock}}</td>
+          </tr>
+          {{else}}
+          <tr><td colspan="3" class="empty">Kritik seviyenin altında ürün yok.</td></tr>
+          {{end}}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="open-h">
+    <div class="section-head">
+      <h2 id="open-h">Açık sevkiyatlar</h2>
+      <a href="/shipments">Tümü</a>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <tbody>
+          {{range $d.Open}}
+          <tr>
+            <td><a href="/shipments/{{.ID}}" class="code">{{.Code}}</a><br><span class="small muted">{{.Customer}}</span></td>
+            <td class="num">{{template "status-tag" .Status}}</td>
+          </tr>
+          {{else}}
+          <tr><td class="empty">Hazırlanan ya da yolda sevkiyat yok.</td></tr>
+          {{end}}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+
+<section class="section" aria-labelledby="recent-h">
+  <div class="section-head">
+    <h2 id="recent-h">Son hareketler</h2>
+    <a href="/movements">Hareket defteri</a>
+  </div>
+  {{template "movement-table" (mtable $d.Recent false)}}
+</section>
+{{end}}

@@ -1,0 +1,87 @@
+{{define "content"}}
+{{$p := .Data.Product}}
+<div class="page-head">
+  <div>
+    <p class="sku muted">{{$p.SKU}}</p>
+    <h1>{{$p.Name}}</h1>
+    <p class="sub">{{if $p.Location}}Konum {{$p.Location}}{{else}}Konum girilmemiş{{end}}{{if $p.Archived}} · Arşivde{{end}}</p>
+  </div>
+  <div class="actions">
+    <a class="btn btn-quiet" href="/products/{{$p.ID}}/edit">Düzenle</a>
+    <form method="post" action="/products/{{$p.ID}}/archive" class="inline-form"
+          {{if not $p.Archived}}hx-post="/products/{{$p.ID}}/archive" hx-confirm="{{$p.Name}} arşivlensin mi? Geçmiş hareketler korunur, ürün listede gizlenir."{{end}}>
+      {{template "csrf" .}}
+      <input type="hidden" name="archived" value="{{if $p.Archived}}0{{else}}1{{end}}">
+      <button class="btn btn-quiet" type="submit">{{if $p.Archived}}Arşivden çıkar{{else}}Arşivle{{end}}</button>
+    </form>
+  </div>
+</div>
+
+{{template "stock-board" .}}
+
+<section class="section" aria-labelledby="history-h">
+  <div class="section-head">
+    <h2 id="history-h">Son 50 hareket</h2>
+    <a href="/movements">Tüm hareketler</a>
+  </div>
+  <div id="movement-list">{{template "movement-table" (mtable .Data.Movements true)}}</div>
+</section>
+{{end}}
+
+{{define "stock-board"}}
+{{$d := .Data}}{{$p := $d.Product}}
+<div id="stock-board" class="stock-board section">
+  <div>
+    <p class="stock-figure{{if $p.Low}} is-low{{end}}" aria-live="polite">
+      <span class="value">{{$p.Stock}}</span>
+      <span class="unit">{{$p.Unit}} stokta{{if $p.Low}}, kritik seviyede{{end}}</span>
+    </p>
+    <svg class="gauge" viewBox="0 0 400 34" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+      <rect class="track" x="0" y="8" width="400" height="18" rx="2"/>
+      <rect class="fill{{if $p.Low}} low{{end}}" x="0" y="8" width="{{$d.Gauge.FillW}}" height="18" rx="2"/>
+      {{if $d.Gauge.HasMin}}<rect class="marker" x="{{$d.Gauge.MarkX}}" y="0" width="5" height="34"/>{{end}}
+    </svg>
+    <p class="gauge-caption">
+      {{if $d.Gauge.HasMin}}Sarı çizgi kritik seviye: {{$p.MinStock}} {{$p.Unit}}.{{else}}Kritik seviye tanımlı değil. <a href="/products/{{$p.ID}}/edit">Seviye ekle</a>{{end}}
+    </p>
+    <dl class="meta-list small">
+      {{if $p.WeightKg}}<dt>Birim ağırlık</dt><dd>{{num $p.WeightKg 3}} kg</dd>{{end}}
+      {{if $p.VolumeM3}}<dt>Birim hacim</dt><dd>{{num $p.VolumeM3 4}} m³</dd>{{end}}
+      <dt>Kayıt</dt><dd>{{date $p.CreatedAt}}</dd>
+    </dl>
+  </div>
+
+  {{if $p.Archived}}
+  <p class="muted">Arşivdeki ürüne hareket girilemez. Önce arşivden çıkarın.</p>
+  {{else}}
+  <form method="post" action="/products/{{$p.ID}}/movements" class="form-stack"
+        hx-post="/products/{{$p.ID}}/movements" hx-target="#stock-board" hx-swap="outerHTML" novalidate>
+    {{template "csrf" .}}
+    <fieldset>
+      <legend>Hareket gir</legend>
+      <div class="segmented">
+        <input type="radio" id="k-in" name="kind" value="in"{{if eq $d.Kind "in"}} checked{{end}}><label for="k-in">Giriş</label>
+        <input type="radio" id="k-out" name="kind" value="out"{{if eq $d.Kind "out"}} checked{{end}}><label for="k-out">Çıkış</label>
+        <input type="radio" id="k-adj" name="kind" value="adjust"{{if eq $d.Kind "adjust"}} checked{{end}}><label for="k-adj">Sayım</label>
+      </div>
+      <span class="hint">Sayım: rafta saydığınız miktarı girin, fark otomatik düzeltilir.</span>
+    </fieldset>
+    <div>
+      <label for="qty">Miktar ({{$p.Unit}})</label>
+      <input id="qty" name="qty" type="text" inputmode="decimal" autocomplete="off" required value="{{.Val "qty"}}" data-autofocus>
+    </div>
+    <div>
+      <label for="note">Açıklama <span class="muted">(isteğe bağlı)</span></label>
+      <input id="note" name="note" type="text" maxlength="200" placeholder="Tedarikçi, irsaliye no, sebep…" value="{{.Val "note"}}">
+    </div>
+    {{template "flash" $d.Message}}
+    <button class="btn" type="submit">Kaydet</button>
+  </form>
+  {{end}}
+</div>
+{{end}}
+
+{{define "stock-update"}}
+{{template "stock-board" .}}
+<div id="movement-list" hx-swap-oob="true">{{template "movement-table" (mtable .Data.Movements true)}}</div>
+{{end}}

@@ -1,0 +1,26 @@
+{{define "content"}}
+{{$editing := .Data}}
+<div class="page-head">
+  <div>
+    <h1>{{.Title}}</h1>
+    {{if not $editing}}<p class="sub">Stok kodu benzersiz olmalı. Açılış stoğunu bir sonraki adımda giriş olarak yaparsınız.</p>{{end}}
+  </div>
+</div>
+
+<form method="post" action="{{if $editing}}/products/{{$editing.ID}}{{else}}/products{{end}}" class="panel" novalidate>
+  {{template "csrf" .}}
+  <div class="form-grid">
+    {{template "field" (fieldOf . "sku" "Stok kodu" "" "" true false)}}
+    {{template "field" (fieldOf . "name" "Ürün adı" "" "" true false)}}
+    {{template "field" (fieldOf . "unit" "Birim" "adet, kg, koli, m…" "" false false)}}
+    {{template "field" (fieldOf . "location" "Raf / konum" "Örn. A-03-2" "" false false)}}
+    {{template "field" (fieldOf . "min_stock" "Kritik stok seviyesi" "Stok bu değere inince listede uyarı çıkar. Boş bırakılırsa uyarı yok." "decimal" false false)}}
+    {{template "field" (fieldOf . "weight_kg" "Birim ağırlık (kg)" "Sevkiyat toplam ağırlığı için." "decimal" false false)}}
+    {{template "field" (fieldOf . "volume_m3" "Birim hacim (m³)" "Sevkiyat toplam hacmi için." "decimal" false false)}}
+  </div>
+  <div class="actions form-actions">
+    <button class="btn" type="submit">{{if $editing}}Değişiklikleri kaydet{{else}}Ürünü ekle{{end}}</button>
+    <a class="btn btn-quiet" href="{{if $editing}}/products/{{$editing.ID}}{{else}}/products{{end}}">Vazgeç</a>
+  </div>
+</form>
+{{end}}

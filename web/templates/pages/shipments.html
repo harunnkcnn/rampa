@@ -1,0 +1,67 @@
+{{define "content"}}
+{{$d := .Data}}
+<div class="page-head">
+  <div>
+    <h1>Sevkiyatlar</h1>
+    <p class="sub">Yükle dediğiniz anda satırlar stoktan düşer; iptal ederseniz stoğa geri döner.</p>
+  </div>
+</div>
+
+<details class="panel section no-print"{{if not $d.Shipments}} open{{end}}>
+  <summary><h2 class="inline-form">Yeni sevkiyat</h2></summary>
+  <form method="post" action="/shipments" class="form-grid section" novalidate>
+    {{template "csrf" .}}
+    <div class="full">
+      <label for="customer">Müşteri / alıcı</label>
+      <input id="customer" name="customer" type="text" required maxlength="120">
+    </div>
+    <div>
+      <label for="plate">Plaka</label>
+      <input id="plate" name="plate" type="text" maxlength="20" autocapitalize="characters" placeholder="34 ABC 123">
+    </div>
+    <div>
+      <label for="driver">Şoför</label>
+      <input id="driver" name="driver" type="text" maxlength="80">
+    </div>
+    <div class="full">
+      <button class="btn" type="submit">Sevkiyatı oluştur</button>
+    </div>
+  </form>
+</details>
+
+<ul class="tabs section" aria-label="Duruma göre">
+  <li><a href="/shipments"{{if eq $d.Tab "open"}} aria-current="page"{{end}}>Açık</a></li>
+  <li><a href="/shipments?tab=delivered"{{if eq $d.Tab "delivered"}} aria-current="page"{{end}}>Teslim edilen</a></li>
+  <li><a href="/shipments?tab=cancelled"{{if eq $d.Tab "cancelled"}} aria-current="page"{{end}}>İptal</a></li>
+  <li><a href="/shipments?tab=all"{{if eq $d.Tab "all"}} aria-current="page"{{end}}>Tümü</a></li>
+</ul>
+
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th scope="col">Kod</th>
+        <th scope="col">Müşteri</th>
+        <th scope="col" class="hide-sm">Plaka</th>
+        <th scope="col" class="num">Satır</th>
+        <th scope="col">Durum</th>
+        <th scope="col" class="hide-sm">Açılış</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{range $d.Shipments}}
+      <tr>
+        <td><a class="code" href="/shipments/{{.ID}}">{{.Code}}</a></td>
+        <td>{{.Customer}}</td>
+        <td class="hide-sm code">{{.Plate}}</td>
+        <td class="num">{{.ItemCount}}</td>
+        <td>{{template "status-tag" .Status}}</td>
+        <td class="hide-sm small muted">{{datetime .CreatedAt}}</td>
+      </tr>
+      {{else}}
+      <tr><td colspan="6" class="empty">Bu sekmede sevkiyat yok.</td></tr>
+      {{end}}
+    </tbody>
+  </table>
+</div>
+{{end}}

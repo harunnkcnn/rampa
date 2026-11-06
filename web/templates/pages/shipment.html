@@ -1,0 +1,144 @@
+{{define "content"}}
+{{$sh := .Data.Shipment}}
+<div class="page-head">
+  <div>
+    <div class="ship-head">
+      <h1 class="code">{{$sh.Code}}</h1>
+      {{template "status-tag" $sh.Status}}
+    </div>
+    <p class="sub">{{$sh.Customer}}{{if $sh.Plate}} · {{$sh.Plate}}{{end}}{{if $sh.Driver}} · {{$sh.Driver}}{{end}}</p>
+  </div>
+  <div class="actions no-print">
+    <button class="btn btn-quiet" type="button" data-print>Yazdır</button>
+    {{if eq $sh.Status "draft"}}
+    <form method="post" action="/shipments/{{$sh.ID}}/load" class="inline-form"
+          hx-post="/shipments/{{$sh.ID}}/load" hx-confirm="Sevkiyat yüklensin mi? Tüm satırlar stoktan düşülecek.">
+      {{template "csrf" .}}<button class="btn btn-go" type="submit">Yükle ve stoktan düş</button>
+    </form>
+    {{end}}
+    {{if eq $sh.Status "loaded"}}
+    <form method="post" action="/shipments/{{$sh.ID}}/deliver" class="inline-form">
+      {{template "csrf" .}}<button class="btn" type="submit">Teslim edildi</button>
+    </form>
+    {{end}}
+    {{if or (eq $sh.Status "draft") (eq $sh.Status "loaded")}}
+    <form method="post" action="/shipments/{{$sh.ID}}/cancel" class="inline-form"
+          hx-post="/shipments/{{$sh.ID}}/cancel" hx-confirm="{{if eq $sh.Status "loaded"}}Sevkiyat iptal edilsin mi? Yüklenen ürünler stoğa geri eklenecek.{{else}}Sevkiyat iptal edilsin mi?{{end}}">
+      {{template "csrf" .}}<button class="btn btn-danger" type="submit">İptal et</button>
+    </form>
+    {{end}}
+  </div>
+</div>
+
+<div class="print-only">
+  <p><strong>{{.Company}}</strong> · Sevk belgesi {{$sh.Code}} · {{datetime $sh.CreatedAt}}</p>
+</div>
+
+<div class="grid-2">
+  <section aria-labelledby="items-h">
+    <div class="section-head"><h2 id="items-h">Yük listesi</h2></div>
+    {{template "shipment-items" .}}
+  </section>
+
+  <aside class="form-stack">
+    {{if or (eq $sh.Status "draft") (eq $sh.Status "loaded")}}
+    <form method="post" action="/shipments/{{$sh.ID}}" class="panel form-stack no-print" novalidate>
+      {{template "csrf" .}}
+      <h2>Sevkiyat bilgisi</h2>
+      <div><label for="customer">Müşteri / alıcı</label><input id="customer" name="customer" type="text" required maxlength="120" value="{{$sh.Customer}}"></div>
+      <div><label for="plate">Plaka</label><input id="plate" name="plate" type="text" maxlength="20" value="{{$sh.Plate}}"></div>
+      <div><label for="driver">Şoför</label><input id="driver" name="driver" type="text" maxlength="80" value="{{$sh.Driver}}"></div>
+      <div><label for="snote">Not</label><textarea id="snote" name="note" maxlength="500">{{$sh.Note}}</textarea></div>
+      <button class="btn btn-quiet" type="submit">Bilgileri kaydet</button>
+    </form>
+    {{else}}
+    <div class="panel">
+      <h2>Sevkiyat bilgisi</h2>
+      <dl class="meta-list section">
+        <dt>Müşteri</dt><dd>{{$sh.Customer}}</dd>
+        {{if $sh.Plate}}<dt>Plaka</dt><dd>{{$sh.Plate}}</dd>{{end}}
+        {{if $sh.Driver}}<dt>Şoför</dt><dd>{{$sh.Driver}}</dd>{{end}}
+        {{if $sh.Note}}<dt>Not</dt><dd>{{$sh.Note}}</dd>{{end}}
+      </dl>
+    </div>
+    {{end}}
+    <div class="panel">
+      <h2>Zaman çizelgesi</h2>
+      <dl class="meta-list section">
+        <dt>Açıldı</dt><dd>{{datetime $sh.CreatedAt}}</dd>
+        {{if $sh.LoadedAt}}<dt>Yüklendi</dt><dd>{{ptime $sh.LoadedAt}}</dd>{{end}}
+        {{if $sh.DeliveredAt}}<dt>Teslim</dt><dd>{{ptime $sh.DeliveredAt}}</dd>{{end}}
+      </dl>
+    </div>
+    {{range .Data.Extras}}
+    <div class="panel no-print">
+      <h2>{{.Title}}</h2>
+      <div class="section">{{.Body}}</div>
+    </div>
+    {{end}}
+  </aside>
+</div>
+{{end}}
+
+{{define "shipment-items"}}
+{{$d := .Data}}{{$sh := $d.Shipment}}
+<div id="shipment-items">
+  {{template "flash" $d.Message}}
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th scope="col">Ürün</th>
+          <th scope="col" class="num">Miktar</th>
+          {{if $sh.Editable}}<th scope="col" class="num">Stok</th><th scope="col"><span class="visually-hidden">İşlem</span></th>{{end}}
+        </tr>
+      </thead>
+      <tbody>
+        {{range $sh.Items}}
+        <tr{{if and $sh.Editable .Short}} class="line-short"{{end}}>
+          <td><a href="/products/{{.ProductID}}">{{.Name}}</a> <span class="sku muted small">{{.SKU}}</span></td>
+          <td class="num">{{.Qty}} {{.Unit}}</td>
+          {{if $sh.Editable}}
+          <td class="num{{if .Short}} qty-out{{else}} muted{{end}}">{{.Stock}}{{if .Short}} <span class="visually-hidden">yetersiz</span>{{end}}</td>
+          <td class="num">
+            <form method="post" action="/shipments/{{$sh.ID}}/items/{{.ID}}/delete" class="inline-form"
+                  hx-post="/shipments/{{$sh.ID}}/items/{{.ID}}/delete" hx-target="#shipment-items" hx-swap="outerHTML">
+              {{template "csrf" $}}<button class="linklike small" type="submit" aria-label="{{.Name}} satırını çıkar">Çıkar</button>
+            </form>
+          </td>
+          {{end}}
+        </tr>
+        {{else}}
+        <tr><td colspan="4" class="empty">Yük listesi boş. Aşağıdan ürün ekleyin.</td></tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+  {{if $sh.Items}}
+  <p class="totals small">
+    <span><strong>{{len $sh.Items}}</strong> satır</span>
+    <span>Toplam ağırlık <strong>{{num $sh.TotalWeightKg 1}} kg</strong></span>
+    <span>Toplam hacim <strong>{{num $sh.TotalVolumeM3 2}} m³</strong></span>
+  </p>
+  {{end}}
+
+  {{if $sh.Editable}}
+  <form method="post" action="/shipments/{{$sh.ID}}/items" class="add-line no-print"
+        hx-post="/shipments/{{$sh.ID}}/items" hx-target="#shipment-items" hx-swap="outerHTML" novalidate>
+    {{template "csrf" $}}
+    <div>
+      <label for="product_id">Ürün</label>
+      <select id="product_id" name="product_id" required data-autofocus>
+        <option value="">Ürün seçin</option>
+        {{range $d.Products}}<option value="{{.ID}}">{{.SKU}} · {{.Name}} ({{.Stock}} {{.Unit}})</option>{{end}}
+      </select>
+    </div>
+    <div>
+      <label for="iqty">Miktar</label>
+      <input id="iqty" name="qty" type="text" inputmode="decimal" required autocomplete="off">
+    </div>
+    <button class="btn btn-quiet" type="submit">Satır ekle</button>
+  </form>
+  {{end}}
+</div>
+{{end}}

@@ -1,0 +1,26 @@
+{{define "content"}}
+<h1>Rampa'yı kur</h1>
+<p class="muted">Yönetici hesabını oluşturun. Bu ekran yalnızca ilk açılışta görünür.</p>
+<form method="post" action="/setup" class="form-stack" novalidate>
+  <div>
+    <label for="company">İşletme adı <span class="muted">(isteğe bağlı)</span></label>
+    <input id="company" name="company" type="text" value="{{.Val "company"}}" maxlength="80">
+  </div>
+  <div>
+    <label for="username">Kullanıcı adı</label>
+    <input id="username" name="username" type="text" autocomplete="username" autocapitalize="none" required value="{{.Val "username"}}"{{with .Err "username"}} aria-invalid="true" aria-describedby="username-err"{{end}}>
+    {{with .Err "username"}}<span class="field-error" id="username-err">{{.}}</span>{{end}}
+  </div>
+  <div>
+    <label for="password">Parola</label>
+    <input id="password" name="password" type="password" autocomplete="new-password" required minlength="10"{{with .Err "password"}} aria-invalid="true" aria-describedby="password-err"{{end}}>
+    {{with .Err "password"}}<span class="field-error" id="password-err">{{.}}</span>{{else}}<span class="hint">En az 10 karakter.</span>{{end}}
+  </div>
+  <div>
+    <label for="password2">Parola tekrar</label>
+    <input id="password2" name="password2" type="password" autocomplete="new-password" required{{with .Err "password2"}} aria-invalid="true" aria-describedby="password2-err"{{end}}>
+    {{with .Err "password2"}}<span class="field-error" id="password2-err">{{.}}</span>{{end}}
+  </div>
+  <button class="btn" type="submit">Hesabı oluştur</button>
+</form>
+{{end}}

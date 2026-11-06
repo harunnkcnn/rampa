@@ -1,0 +1,16 @@
+{{define "content"}}
+<h1 class="visually-hidden">Giriş yap</h1>
+<form method="post" action="/login" class="form-stack" novalidate>
+  {{with .Err "form"}}<div class="flash flash-error" role="alert">{{.}}</div>{{end}}
+  <input type="hidden" name="next" value="{{.Val "next"}}">
+  <div>
+    <label for="username">Kullanıcı adı</label>
+    <input id="username" name="username" type="text" autocomplete="username" autocapitalize="none" required autofocus value="{{.Val "username"}}">
+  </div>
+  <div>
+    <label for="password">Parola</label>
+    <input id="password" name="password" type="password" autocomplete="current-password" required>
+  </div>
+  <button class="btn" type="submit">Giriş yap</button>
+</form>
+{{end}}
