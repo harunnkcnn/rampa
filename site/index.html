@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Rampa | Depo stok ve sevkiyat takibi</title>
+  <meta name="description" content="Küçük ve orta ölçekli depolar için açık kaynak stok, giriş/çıkış ve sevkiyat takibi. Tek dosya, kurulum yok, internetsiz çalışır.">
+  <meta property="og:title" content="Rampa: depo stok ve sevkiyat takibi">
+  <meta property="og:description" content="Tek dosya, kurulum yok. İndir, çalıştır, tarayıcıda aç. MIT lisanslı.">
+  <meta property="og:image" content="https://harunnkcnn.github.io/rampa/assets/ozet.png">
+  <meta property="og:type" content="website">
+  <meta name="theme-color" content="#1a211d">
+  <link rel="icon" href="assets/icon.svg">
+  <style>
+    @font-face { font-family: "Archivo"; font-display: swap; font-weight: 100 900; font-stretch: 62% 125%;
+      src: url("assets/archivo-latin-ext-standard-normal.woff2") format("woff2-variations");
+      unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1E00-1E9F, U+20A0-20C0, U+2C60-2C7F; }
+    @font-face { font-family: "Archivo"; font-display: swap; font-weight: 100 900; font-stretch: 62% 125%;
+      src: url("assets/archivo-latin-standard-normal.woff2") format("woff2-variations");
+      unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122, U+2212; }
+
+    :root {
+      --beton: #e4e6e1; --panel: #f3f4f0; --ink: #1a211d; --steel: #4b5650; --line: #c3c9c2;
+      --mark: #edb518; --in: #1f6b45; --out: #9e3626;
+      --font: "Archivo", system-ui, -apple-system, "Segoe UI", sans-serif;
+      color-scheme: light;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) { --beton: #141a17; --panel: #1c2420; --ink: #eef0ea; --steel: #a7b0aa; --line: #2e3833; color-scheme: dark; }
+    }
+    :root[data-theme="dark"] { --beton: #141a17; --panel: #1c2420; --ink: #eef0ea; --steel: #a7b0aa; --line: #2e3833; color-scheme: dark; }
+
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--beton); color: var(--ink); font: 400 1.0625rem/1.6 var(--font); }
+    a { color: inherit; text-underline-offset: 3px; }
+    :focus-visible { outline: 3px solid var(--mark); outline-offset: 3px; }
+    img { display: block; max-width: 100%; height: auto; }
+    .wrap { max-width: 1120px; margin: 0 auto; padding: 0 16px; }
+    @media (min-width: 720px) { .wrap { padding: 0 32px; } }
+
+    /* Floor-marking stripe: the one loud thing on the page */
+    .stripe { height: 10px; background: repeating-linear-gradient(-45deg, var(--mark) 0 14px, var(--ink) 14px 28px); }
+
+    header.top { background: #1a211d; color: #f3f4f0; }
+    .top .wrap { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding-top: 14px; padding-bottom: 14px; }
+    .brand { display: flex; align-items: center; gap: .6rem; font-weight: 800; font-stretch: 118%; font-size: 1.25rem; text-decoration: none; }
+    .brand img { width: 30px; height: 30px; }
+    .top nav { display: flex; gap: 1.25rem; font-size: .95rem; }
+    .top nav a { text-decoration: none; opacity: .8; }
+    .top nav a:hover { opacity: 1; text-decoration: underline; }
+
+    .hero { background: #1a211d; color: #f3f4f0; padding: 56px 0 0; overflow: hidden; }
+    .hero h1 { margin: 0; font-size: clamp(2.4rem, 7vw, 4.6rem); line-height: 1; font-weight: 800; font-stretch: 125%; letter-spacing: -0.02em; max-width: 14ch; }
+    .hero p.lede { margin: 1.25rem 0 0; font-size: 1.2rem; max-width: 52ch; color: #c8cec8; }
+    .cta { display: flex; flex-wrap: wrap; gap: .75rem; margin: 2rem 0 0; }
+    .btn { display: inline-flex; align-items: center; min-height: 48px; padding: .7rem 1.3rem; border-radius: 4px; font-weight: 700; text-decoration: none; border: 2px solid currentColor; }
+    .btn-mark { background: var(--mark); color: #1a211d; border-color: var(--mark); }
+    .btn-mark:hover { background: #f6c94a; }
+    .btn-line:hover { background: rgba(255,255,255,.08); }
+    .hero .shot { margin: 48px 0 0; border-radius: 8px 8px 0 0; overflow: hidden; box-shadow: 0 -2px 0 2px #2c3530; }
+
+    section { padding: 72px 0; }
+    section h2 { margin: 0 0 .5rem; font-size: clamp(1.6rem, 4vw, 2.2rem); font-weight: 800; font-stretch: 118%; line-height: 1.1; }
+    section .intro { margin: 0 0 2.5rem; color: var(--steel); max-width: 60ch; }
+
+    .flow { display: grid; gap: 0; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); border-top: 3px solid var(--ink); }
+    .flow div { padding: 1.25rem 1.25rem 1.25rem 0; border-bottom: 1px solid var(--line); }
+    .flow div + div { padding-left: 1.25rem; border-left: 1px solid var(--line); }
+    @media (max-width: 860px) { .flow div + div { border-left: 0; padding-left: 0; } }
+    .flow b { display: block; font-size: 1.15rem; font-stretch: 118%; margin-bottom: .3rem; }
+    .flow span { color: var(--steel); font-size: .98rem; }
+
+    .split { display: grid; gap: 48px; grid-template-columns: minmax(0, 1fr) 300px; align-items: start; }
+    @media (max-width: 860px) { .split { grid-template-columns: 1fr; } .split .phone { max-width: 300px; } }
+    .facts { list-style: none; margin: 0; padding: 0; }
+    .facts li { padding: 1rem 0; border-bottom: 1px solid var(--line); }
+    .facts li:first-child { padding-top: 0; }
+    .facts b { font-weight: 700; }
+    .phone { border: 10px solid #1a211d; border-radius: 28px; overflow: hidden; background: #1a211d; }
+
+    .start { background: var(--panel); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+    .steps { display: grid; gap: 24px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); counter-reset: s; }
+    .steps li { list-style: none; counter-increment: s; }
+    .steps li::before { content: counter(s); display: grid; place-items: center; width: 2.2rem; height: 2.2rem; border-radius: 50%; background: var(--ink); color: var(--beton); font-weight: 800; margin-bottom: .75rem; }
+    .steps ol { padding: 0; margin: 0; display: contents; }
+    pre { margin: .6rem 0 0; padding: .8rem 1rem; background: #1a211d; color: #e9ece6; border-radius: 4px; overflow-x: auto; font-size: .9rem; }
+    code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+
+    table.tech { width: 100%; border-collapse: collapse; font-size: .98rem; }
+    .tech th, .tech td { text-align: left; padding: .8rem .75rem .8rem 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+    .tech th { width: 9rem; font-weight: 700; }
+    .tech td + td { color: var(--steel); }
+    .table-scroll { overflow-x: auto; }
+
+    .pro { border-left: 6px solid var(--mark); padding: 1.25rem 1.5rem; background: var(--panel); }
+    .pro h3 { margin: 0 0 .4rem; font-size: 1.2rem; font-stretch: 118%; }
+    .pro p { margin: 0; color: var(--steel); }
+
+    footer { padding: 32px 0 48px; color: var(--steel); font-size: .9rem; }
+    footer .wrap { display: flex; flex-wrap: wrap; gap: .5rem 1.5rem; justify-content: space-between; }
+  </style>
+</head>
+<body>
+  <header class="top">
+    <div class="wrap">
+      <a class="brand" href="./"><img src="assets/icon.svg" alt="">Rampa</a>
+      <nav aria-label="Sayfa">
+        <a href="#ozellikler">Özellikler</a>
+        <a href="#kurulum">Kurulum</a>
+        <a href="https://github.com/harunnkcnn/rampa">GitHub</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <div class="hero">
+      <div class="wrap">
+        <h1>Depo, rampada yönetilir.</h1>
+        <p class="lede">Küçük ve orta ölçekli depolar için stok, giriş/çıkış ve sevkiyat takibi. Tek dosya, kurulum yok: indir, çalıştır, tarayıcıda aç. İnternet olmasa da çalışır.</p>
+        <div class="cta">
+          <a class="btn btn-mark" href="https://github.com/harunnkcnn/rampa/releases/latest">Ücretsiz indir</a>
+          <a class="btn btn-line" href="https://github.com/harunnkcnn/rampa">Kaynak kodu</a>
+        </div>
+        <div class="shot"><img src="assets/ozet.png" width="1366" height="1117" alt="Rampa özet ekranı: kritik stoktaki ürünler, açık sevkiyatlar ve son hareketler"></div>
+      </div>
+    </div>
+    <div class="stripe" role="presentation"></div>
+
+    <section id="ozellikler">
+      <div class="wrap">
+        <h2>Bir depo görevlisinin gününe göre</h2>
+        <p class="intro">Mal kabul, raf, sevkiyat, araç, teslim. Ürünü bulursun, büyük stok rakamını görürsün, girişi ya da çıkışı iki dokunuşla kaydedersin.</p>
+        <div class="flow">
+          <div><b>Mal kabul</b><span>Giriş kaydı, tedarikçi ve irsaliye notuyla. Stok anında artar.</span></div>
+          <div><b>Raf ve sayım</b><span>Raf konumu, kritik seviye. Sayımda farkı Rampa hesaplar, kayıtlar silinmez.</span></div>
+          <div><b>Sevkiyat</b><span>Taslak, yüklendi, teslim edildi. "Yükle" dediğin anda satırlar stoktan düşer.</span></div>
+          <div><b>Teslim</b><span>İptal edilen sevkiyat stoğa geri döner. Her adım hareket defterinde.</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="wrap split">
+        <ul class="facts">
+          <li><b>Tek işlemde yükleme.</b> Bir satırda stok yetmezse hiçbir şey düşülmez; yarım kalmış sevkiyat olmaz.</li>
+          <li><b>Ondalıklı miktar.</b> kg, metre, litre için <code>12,5</code> ya da <code>1.250</code> yaz; miktarlar kayan nokta hatası olmadan binde bir hassasiyetle tutulur.</li>
+          <li><b>Excel'de doğru açılan CSV.</b> Türkçe karakterler, noktalı virgül ve formül enjeksiyonuna karşı koruma.</li>
+          <li><b>Kritik stok uyarısı</b> ve günlük özet: kaç giriş, kaç çıkış, kaç açık sevkiyat.</li>
+          <li><b>Yönetici ve depo kullanıcısı</b> rolleri; giriş denemelerinde hız sınırı, katı güvenlik başlıkları.</li>
+          <li><b>Telefonda rahat.</b> Rampada eldivenle bile basılabilecek büyük düğmeler.</li>
+        </ul>
+        <div class="phone"><img src="assets/mobil.png" width="390" height="1600" alt="Telefonda ürün ekranı: büyük stok rakamı, kritik seviye çizgisi ve hareket girişi" loading="lazy"></div>
+      </div>
+    </section>
+
+    <section id="kurulum" class="start">
+      <div class="wrap">
+        <h2>İki dakikada çalışır</h2>
+        <p class="intro">Sunucu, veritabanı ya da internet bağlantısı gerekmez. Veriler aynı klasördeki tek bir dosyada durur; yedek için o dosyayı kopyalamak yeter.</p>
+        <ol class="steps">
+          <li><b>İndir</b><br>Windows, Linux ya da macOS için dosyayı <a href="https://github.com/harunnkcnn/rampa/releases/latest">Releases</a> sayfasından al.</li>
+          <li><b>Çalıştır</b><pre><code>./rampa</code></pre></li>
+          <li><b>Aç</b><br>Tarayıcıda <code>http://127.0.0.1:8080</code> adresine git, yönetici hesabını oluştur.</li>
+        </ol>
+        <p style="margin:2rem 0 0;color:var(--steel)">Docker tercih edersen depodaki <code>Dockerfile</code> ile: <code>docker build -t rampa . &amp;&amp; docker run -p 8080:8080 -v rampa-data:/data rampa</code></p>
+      </div>
+    </section>
+
+    <section>
+      <div class="wrap">
+        <h2>Neyle yapıldı</h2>
+        <p class="intro">Bağımlılık listesi bilerek kısa: SQLite sürücüsü dışında üçüncü parti Go paketi yok.</p>
+        <div class="table-scroll">
+          <table class="tech">
+            <tr><th>Sunucu</th><td>Go, standart <code>net/http</code></td><td>Tek, bağımlılıksız dosya; her platforma derlenir</td></tr>
+            <tr><th>Veritabanı</th><td>SQLite, CGO'suz sürücü</td><td>Kurulum yok, tek dosyada yedek, WAL ile eşzamanlı okuma</td></tr>
+            <tr><th>Arayüz</th><td>Sunucuda render edilen HTML + htmx</td><td>JavaScript derleme zinciri yok; JS kapalıyken de çalışır</td></tr>
+            <tr><th>Güvenlik</th><td>PBKDF2 600.000 tur, CSRF, katı CSP</td><td>OWASP önerileri; oturum belirteci yalnızca özet olarak saklanır</td></tr>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section style="padding-top:0">
+      <div class="wrap">
+        <div class="pro">
+          <h3>Rampa Pro</h3>
+          <p>Raporlar, kritik stok sipariş önerisi ve tır yükleme planı (LDM, palet yerleşimi, boşaltma sırası, ağırlık merkezi) ayrı, lisanslı bir sürümde. Açık sürüm tek başına eksiksiz çalışır. 14 günlük deneme için <a href="https://github.com/harunnkcnn">GitHub</a> üzerinden yaz.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div class="stripe" role="presentation"></div>
+  <footer>
+    <div class="wrap">
+      <span>Rampa, MIT lisanslı açık kaynak. Archivo yazı tipi SIL OFL ile.</span>
+      <span>Geliştiren <a href="https://github.com/harunnkcnn">Harun Kaçan</a></span>
+    </div>
+  </footer>
+</body>
+</html>

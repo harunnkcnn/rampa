@@ -1,5 +1,7 @@
 # Rampa
 
+**Tanıtım sayfası:** https://harunnkcnn.github.io/rampa/
+
 Küçük ve orta ölçekli depolar için stok, giriş/çıkış ve sevkiyat takibi. Tek dosya, kurulum yok: indir, çalıştır, tarayıcıda aç.
 
 ![Özet ekranı](docs/ozet.png)
