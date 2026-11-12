@@ -1,0 +1,20 @@
+{{define "content"}}
+{{if .Data}}
+<div class="t-list">
+  {{range $i, $r := .Data}}
+  <a class="t-item" href="/t/kabul/{{$r.ID}}" data-digit="{{add $i 1}}">
+    <span class="t-num">{{add $i 1}}</span><span class="t-item-main"><strong>{{$r.Supplier}}</strong><small>{{$r.Code}}{{if $r.DocNo}} · {{$r.DocNo}}{{end}} · {{$r.Lines}} çeşit</small></span>
+  </a>
+  {{end}}
+</div>
+{{end}}
+<form method="post" action="/t/kabul" class="t-form t-card" autocomplete="off">
+  {{template "csrf" .}}
+  <h2>Yeni kabul</h2>
+  <label for="tedarikci">Tedarikçi</label>
+  <input id="tedarikci" name="tedarikci" type="text" data-next="irsaliye" {{if not .Data}}autofocus{{end}}>
+  <label for="irsaliye">İrsaliye no</label>
+  <input id="irsaliye" name="irsaliye" type="text" autocapitalize="characters">
+  <button type="submit" class="t-btn t-primary">Kabulü aç</button>
+</form>
+{{end}}

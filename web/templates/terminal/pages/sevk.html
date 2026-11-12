@@ -1,0 +1,46 @@
+{{define "content"}}
+{{$d := .Data}}{{$sh := $d.Shipment}}
+<p class="t-sub">{{$sh.Customer}}{{if $sh.Plate}} · {{$sh.Plate}}{{end}}</p>
+{{if $sh.Editable}}
+<form method="post" action="/t/sevk/{{$sh.ID}}" class="t-form t-scan" autocomplete="off">
+  {{template "csrf" .}}
+  <div class="t-row">
+    <div class="t-col">
+      <label for="hucre">Hücre</label>
+      <input id="hucre" name="hucre" type="text" value="{{.Val "hucre"}}" data-next="kod" autocapitalize="characters" {{if not (.Val "hucre")}}autofocus{{end}}>
+    </div>
+    <div class="t-col t-qty">
+      <label for="miktar">Miktar</label>
+      <input id="miktar" name="miktar" type="text" inputmode="decimal" placeholder="1" data-next="kod">
+    </div>
+  </div>
+  <label for="kod">Ürün barkodu</label>
+  <input id="kod" name="kod" type="text" class="t-code" autocapitalize="none" spellcheck="false" {{if .Val "hucre"}}autofocus{{end}}>
+  <button type="submit" class="t-btn t-primary">Topla</button>
+</form>
+{{else}}
+<p class="t-note">Bu sevkiyat {{$sh.Status.Label}} durumunda; toplama yapılamaz.</p>
+{{end}}
+<h2 class="t-h2">Toplanacak ({{len $d.Open}})</h2>
+<table class="t-table">
+  {{range $d.Open}}
+  <tr>
+    <td>{{.Item.Name}}<small>{{.Item.SKU}}{{range .Where}} · {{.BinCode | binOnly}}: {{.Qty}}{{end}}</small></td>
+    <td class="t-n">{{.Item.Picked}}/{{.Item.Qty}}</td>
+  </tr>
+  {{else}}
+  <tr><td class="t-empty">Tüm satırlar toplandı.</td></tr>
+  {{end}}
+</table>
+{{if $d.Done}}
+<h2 class="t-h2">Tamamlanan ({{len $d.Done}})</h2>
+<table class="t-table t-done">
+  {{range $d.Done}}<tr><td>{{.Name}}</td><td class="t-n">{{.Qty}}</td></tr>{{end}}
+</table>
+{{end}}
+{{if $sh.Editable}}
+<form id="load" method="post" action="/t/sevk/{{$sh.ID}}/yukle" class="t-actions" data-confirm="{{if not $sh.PickedAll}}Toplanmayan miktarlar depodaki hücrelerden otomatik düşülecek. {{end}}Sevkiyat yüklensin mi?">
+  {{template "csrf" .}}<button type="submit" class="t-btn{{if $sh.PickedAll}} t-primary{{end}}">Yükle ve stoktan düş</button>
+</form>
+{{end}}
+{{end}}

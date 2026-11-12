@@ -12,6 +12,7 @@ import (
 type Product struct {
 	ID        int64
 	SKU       string
+	Barcode   string
 	Name      string
 	Unit      string
 	Location  string
@@ -31,21 +32,29 @@ type ProductFilter struct {
 	Query           string
 	LowOnly         bool
 	IncludeArchived bool
+	WarehouseID     int64 // 0 = stock across all warehouses
 	Limit           int
 }
 
 const productCols = `
-	p.id, p.sku, p.name, p.unit, p.location, p.min_stock, p.weight_kg, p.volume_m3,
+	p.id, p.sku, p.barcode, p.name, p.unit, p.location, p.min_stock, p.weight_kg, p.volume_m3,
 	p.archived, p.created_at, COALESCE(s.stock, 0)`
 
 const stockJoin = `
 	LEFT JOIN (SELECT product_id, SUM(qty) AS stock FROM movements GROUP BY product_id) s
 	       ON s.product_id = p.id`
 
+// scopedStockJoin limits stock to one warehouse; its single argument is the
+// warehouse id.
+const scopedStockJoin = `
+	LEFT JOIN (SELECT m.product_id, SUM(m.qty) AS stock FROM movements m
+	           JOIN bins x ON x.id = m.bin_id WHERE x.warehouse_id = ? GROUP BY m.product_id) s
+	       ON s.product_id = p.id`
+
 func scanProduct(sc interface{ Scan(...any) error }) (Product, error) {
 	var p Product
 	var created int64
-	err := sc.Scan(&p.ID, &p.SKU, &p.Name, &p.Unit, &p.Location, &p.MinStock,
+	err := sc.Scan(&p.ID, &p.SKU, &p.Barcode, &p.Name, &p.Unit, &p.Location, &p.MinStock,
 		&p.WeightKg, &p.VolumeM3, &p.Archived, &created, &p.Stock)
 	p.CreatedAt = fromUnix(created)
 	return p, err
@@ -60,13 +69,18 @@ func (s *Store) ListProducts(ctx context.Context, f ProductFilter) ([]Product, e
 	}
 	if q := strings.TrimSpace(f.Query); q != "" {
 		like := "%" + escapeLike(q) + "%"
-		where = append(where, `(p.sku LIKE ? ESCAPE '\' OR p.name LIKE ? ESCAPE '\' OR p.location LIKE ? ESCAPE '\')`)
-		args = append(args, like, like, like)
+		where = append(where, `(p.sku LIKE ? ESCAPE '\' OR p.name LIKE ? ESCAPE '\' OR p.location LIKE ? ESCAPE '\' OR p.barcode = ?)`)
+		args = append(args, like, like, like, NormalizeCode(q))
 	}
 	if f.LowOnly {
 		where = append(where, "p.min_stock > 0 AND COALESCE(s.stock, 0) <= p.min_stock")
 	}
-	query := "SELECT " + productCols + " FROM products p" + stockJoin
+	join := stockJoin
+	if f.WarehouseID != 0 {
+		join = scopedStockJoin
+		args = append([]any{f.WarehouseID}, args...)
+	}
+	query := "SELECT " + productCols + " FROM products p" + join
 	if len(where) > 0 {
 		query += " WHERE " + strings.Join(where, " AND ")
 	}
@@ -100,6 +114,19 @@ type queryer interface {
 	QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
 }
 
+// GetProductIn loads a product with its stock in one warehouse (0 = all).
+func (s *Store) GetProductIn(ctx context.Context, id, warehouseID int64) (Product, error) {
+	if warehouseID == 0 {
+		return getProduct(ctx, s.DB, id)
+	}
+	p, err := scanProduct(s.DB.QueryRowContext(ctx,
+		"SELECT "+productCols+" FROM products p"+scopedStockJoin+" WHERE p.id = ?", warehouseID, id))
+	if errors.Is(err, sql.ErrNoRows) {
+		return p, ErrNotFound
+	}
+	return p, err
+}
+
 func getProduct(ctx context.Context, q queryer, id int64) (Product, error) {
 	p, err := scanProduct(q.QueryRowContext(ctx,
 		"SELECT "+productCols+" FROM products p"+stockJoin+" WHERE p.id = ?", id))
@@ -109,8 +136,24 @@ func getProduct(ctx context.Context, q queryer, id int64) (Product, error) {
 	return p, err
 }
 
+// FindProductByCode resolves a scanned barcode or a typed stock code.
+func (s *Store) FindProductByCode(ctx context.Context, code string) (Product, error) {
+	code = strings.TrimSpace(code)
+	if code == "" {
+		return Product{}, ErrUnknownCode
+	}
+	p, err := scanProduct(s.DB.QueryRowContext(ctx, "SELECT "+productCols+" FROM products p"+stockJoin+`
+		WHERE p.archived = 0 AND (p.barcode = ? OR p.sku = ?)
+		ORDER BY p.barcode = ? DESC LIMIT 1`, NormalizeCode(code), strings.ToUpper(code), NormalizeCode(code)))
+	if errors.Is(err, sql.ErrNoRows) {
+		return p, ErrUnknownCode
+	}
+	return p, err
+}
+
 func normalizeProduct(p *Product) error {
 	p.SKU = strings.ToUpper(strings.TrimSpace(p.SKU))
+	p.Barcode = NormalizeCode(p.Barcode)
 	p.Name = strings.TrimSpace(p.Name)
 	p.Unit = strings.TrimSpace(p.Unit)
 	p.Location = strings.TrimSpace(p.Location)
@@ -132,11 +175,11 @@ func (s *Store) CreateProduct(ctx context.Context, p Product) (int64, error) {
 		return 0, err
 	}
 	res, err := s.DB.ExecContext(ctx, `
-		INSERT INTO products (sku, name, unit, location, min_stock, weight_kg, volume_m3, created_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-		p.SKU, p.Name, p.Unit, p.Location, p.MinStock, p.WeightKg, p.VolumeM3, unix(s.now()))
+		INSERT INTO products (sku, barcode, name, unit, location, min_stock, weight_kg, volume_m3, created_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		p.SKU, p.Barcode, p.Name, p.Unit, p.Location, p.MinStock, p.WeightKg, p.VolumeM3, unix(s.now()))
 	if isUnique(err) {
-		return 0, ErrDuplicate
+		return 0, duplicateErr(err)
 	}
 	if err != nil {
 		return 0, err
@@ -150,12 +193,12 @@ func (s *Store) UpdateProduct(ctx context.Context, p Product) error {
 		return err
 	}
 	res, err := s.DB.ExecContext(ctx, `
-		UPDATE products SET sku = ?, name = ?, unit = ?, location = ?, min_stock = ?,
+		UPDATE products SET sku = ?, barcode = ?, name = ?, unit = ?, location = ?, min_stock = ?,
 		       weight_kg = ?, volume_m3 = ?
 		WHERE id = ?`,
-		p.SKU, p.Name, p.Unit, p.Location, p.MinStock, p.WeightKg, p.VolumeM3, p.ID)
+		p.SKU, p.Barcode, p.Name, p.Unit, p.Location, p.MinStock, p.WeightKg, p.VolumeM3, p.ID)
 	if isUnique(err) {
-		return ErrDuplicate
+		return duplicateErr(err)
 	}
 	if err != nil {
 		return err
@@ -170,6 +213,16 @@ func (s *Store) SetProductArchived(ctx context.Context, id int64, archived bool)
 		return err
 	}
 	return mustAffect(res)
+}
+
+// ErrDuplicateBarcode is returned when another product has the barcode.
+var ErrDuplicateBarcode = errors.New("bu barkod başka bir üründe kayıtlı")
+
+func duplicateErr(err error) error {
+	if strings.Contains(err.Error(), "barcode") {
+		return ErrDuplicateBarcode
+	}
+	return ErrDuplicate
 }
 
 func mustAffect(res sql.Result) error {

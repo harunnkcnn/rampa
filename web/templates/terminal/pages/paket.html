@@ -1,0 +1,52 @@
+{{define "content"}}
+{{$d := .Data}}{{$sh := $d.Shipment}}
+<p class="t-sub">{{$sh.Customer}} · {{len $d.Packages}} paket</p>
+{{with $d.Current}}
+<div class="t-card t-pkg">
+  <p class="t-pkg-code">{{.Code}}</p>
+  <p class="t-sub">{{.KindLabel}} açık · {{.Units}} birim</p>
+</div>
+<form method="post" action="/t/paket/{{$sh.ID}}" class="t-form t-scan" autocomplete="off">
+  {{template "csrf" $}}
+  <input type="hidden" name="paket" value="{{.ID}}">
+  <div class="t-row">
+    <div class="t-col t-qty">
+      <label for="miktar">Miktar</label>
+      <input id="miktar" name="miktar" type="text" inputmode="decimal" placeholder="1" data-next="kod">
+    </div>
+    <div class="t-col">
+      <label for="kod">Ürün barkodu</label>
+      <input id="kod" name="kod" type="text" class="t-code" autocapitalize="none" spellcheck="false" autofocus>
+    </div>
+  </div>
+  <button type="submit" class="t-btn t-primary">Pakete koy</button>
+</form>
+<table class="t-table">
+  {{range .Items}}<tr><td>{{.Name}}</td><td class="t-n">{{.Qty}}</td></tr>{{else}}<tr><td class="t-empty">Paket boş.</td></tr>{{end}}
+</table>
+<form id="close" method="post" action="/t/paket/{{$sh.ID}}/kapat" class="t-actions">
+  {{template "csrf" $}}<input type="hidden" name="paket" value="{{.ID}}"><button type="submit" class="t-btn">Paketi kapat</button>
+</form>
+{{else}}
+{{if $d.Left}}
+<div class="t-actions t-two">
+  <form id="new-koli" method="post" action="/t/paket/{{$sh.ID}}/yeni">{{template "csrf" .}}<input type="hidden" name="tur" value="koli"><button type="submit" class="t-btn t-primary">Yeni koli</button></form>
+  <form id="new-palet" method="post" action="/t/paket/{{$sh.ID}}/yeni">{{template "csrf" .}}<input type="hidden" name="tur" value="palet"><button type="submit" class="t-btn">Yeni palet</button></form>
+</div>
+{{else}}
+<p class="t-note">Bu sevkiyatın tüm ürünleri paketlendi.</p>
+{{end}}
+{{end}}
+{{if $d.Left}}
+<h2 class="t-h2">Paketlenecek</h2>
+<table class="t-table">
+  {{range $d.Left}}<tr><td>{{.Name}}<small>{{.SKU}}</small></td><td class="t-n">{{.Packed}}/{{.Qty}}</td></tr>{{end}}
+</table>
+{{end}}
+{{if $d.Packages}}
+<h2 class="t-h2">Paketler</h2>
+<table class="t-table">
+  {{range $d.Packages}}<tr><td class="t-c">{{.Code}}</td><td>{{.KindLabel}}{{if .Open}} · açık{{end}}</td><td class="t-n">{{.Units}}</td></tr>{{end}}
+</table>
+{{end}}
+{{end}}

@@ -150,7 +150,7 @@ func TestEndToEnd(t *testing.T) {
 	mustContain(t, body, "Dinamik Depo", "M8 civata", "SVK-")
 
 	_, body = c.get("/movements.csv")
-	mustContain(t, body, "\xef\xbb\xbfTarih;Stok kodu", "VIDA-M8;M8 civata;Çıkış;-100")
+	mustContain(t, body, "\xef\xbb\xbfTarih;Stok kodu", "VIDA-M8;M8 civata;Çıkış;01;GENEL;-100")
 }
 
 func TestCSRFAndAuth(t *testing.T) {

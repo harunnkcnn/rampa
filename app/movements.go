@@ -22,10 +22,13 @@ type movementsData struct {
 	HasMore   bool
 }
 
-func parseMovementFilter(r *http.Request) (store.MovementFilter, movementsData) {
+func (s *Server) parseMovementFilter(r *http.Request) (store.MovementFilter, movementsData) {
 	q := r.URL.Query()
 	d := movementsData{Kind: q.Get("kind"), From: q.Get("from"), To: q.Get("to")}
 	f := store.MovementFilter{Kind: store.MoveKind(d.Kind)}
+	if sc, err := s.ScopeOf(r); err == nil {
+		f.WarehouseID = sc.ID()
+	}
 	if t, err := time.ParseInLocation("2006-01-02", d.From, time.Local); err == nil {
 		f.Since = t
 	} else {
@@ -44,7 +47,7 @@ func parseMovementFilter(r *http.Request) (store.MovementFilter, movementsData) 
 }
 
 func (s *Server) handleMovements(w http.ResponseWriter, r *http.Request) {
-	f, d := parseMovementFilter(r)
+	f, d := s.parseMovementFilter(r)
 	f.Limit = movementsPageSize + 1
 	f.Offset = d.Offset
 	ms, err := s.Store.ListMovements(r.Context(), f)
@@ -84,18 +87,23 @@ func CSVSafe(v string) string {
 }
 
 func (s *Server) handleMovementsCSV(w http.ResponseWriter, r *http.Request) {
-	f, _ := parseMovementFilter(r)
+	f, _ := s.parseMovementFilter(r)
 	ms, err := s.Store.ListMovements(r.Context(), f)
 	if err != nil {
 		s.ServerError(w, r, err)
 		return
 	}
 	cw := CSVWriter(w, "rampa-hareketler-"+time.Now().Format("2006-01-02")+".csv")
-	cw.Write([]string{"Tarih", "Stok kodu", "Ürün", "Tür", "Miktar", "Birim", "Sevkiyat", "Not", "Kullanıcı"})
+	cw.Write([]string{"Tarih", "Stok kodu", "Ürün", "Tür", "Depo", "Hücre", "Miktar", "Birim", "Belge", "Not", "Kullanıcı"})
 	for _, m := range ms {
+		doc := m.ShipmentCode
+		if m.ReceiptCode != "" {
+			doc = m.ReceiptCode
+		}
 		cw.Write([]string{
 			m.CreatedAt.Format("02.01.2006 15:04"), CSVSafe(m.ProductSKU), CSVSafe(m.ProductName),
-			m.Kind.Label(), m.Qty.Input(), CSVSafe(m.Unit), m.ShipmentCode, CSVSafe(m.Note), CSVSafe(m.UserName),
+			m.Kind.Label(), CSVSafe(m.WarehouseCode), CSVSafe(m.BinCode), m.Qty.Input(), CSVSafe(m.Unit), doc,
+			CSVSafe(m.Note), CSVSafe(m.UserName),
 		})
 	}
 	cw.Flush()

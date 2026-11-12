@@ -1,0 +1,84 @@
+{{define "content"}}
+{{$d := .Data}}
+<div class="page-head">
+  <div>
+    <h1>Depolar ve hücreler</h1>
+    <p class="sub">Şube → depo → hücre. Stok hücre bazında tutulur; her depoda kabul edilen ama rafa kaldırılmamış mal için bir GENEL hücresi bulunur.</p>
+  </div>
+</div>
+
+{{range $b := $d.Branches}}
+<section class="section" aria-labelledby="br-{{$b.ID}}">
+  <h2 id="br-{{$b.ID}}">{{$b.Name}}</h2>
+  <div class="table-wrap section">
+    <table>
+      <thead><tr><th scope="col">Kod</th><th scope="col">Depo</th><th scope="col" class="num">Hücre</th><th scope="col">Durum</th><th scope="col"><span class="visually-hidden">İşlem</span></th></tr></thead>
+      <tbody>
+        {{range $b.Warehouses}}
+        <tr id="depo-{{.ID}}">
+          <td class="code">{{.Code}}</td>
+          <td>{{.Name}}</td>
+          <td class="num">{{.BinCount}}</td>
+          <td>{{if .Active}}<span class="tag tag-delivered">Aktif</span>{{else}}<span class="tag tag-cancelled">Pasif</span>{{end}}</td>
+          <td class="num">
+            <a class="small" href="/settings/warehouses?depo={{.ID}}#depo-{{.ID}}">Hücreler</a>
+            <form method="post" action="/settings/warehouses/{{.ID}}/active" class="inline-form">
+              {{template "csrf" $}}<input type="hidden" name="active" value="{{if .Active}}0{{else}}1{{end}}">
+              <button class="linklike small" type="submit">{{if .Active}}Pasife al{{else}}Aktifleştir{{end}}</button>
+            </form>
+          </td>
+        </tr>
+        {{if eq .ID $d.Open}}
+        <tr class="bins-row"><td colspan="5">
+          <div class="bins-grid">
+            <div>
+              <h3 class="small-head">{{.Code}} hücreleri <a class="small" href="/settings/warehouses/{{.ID}}/labels">Etiketleri yazdır</a></h3>
+              <ul class="bin-chips">{{range index $d.Bins .ID}}<li class="code">{{.Code}}</li>{{end}}</ul>
+            </div>
+            <form method="post" action="/settings/warehouses/{{.ID}}/bins" class="form-stack">
+              {{template "csrf" $}}
+              <div>
+                <label for="codes-{{.ID}}">Hücre ekle</label>
+                <textarea id="codes-{{.ID}}" name="codes" rows="4" placeholder="A-01-1..6&#10;B-02-01..12&#10;RAMPA-1"></textarea>
+                <span class="hint">Her satıra bir kod. <span class="code">A-01-1..6</span> yazarsanız A-01-1'den A-01-6'ya kadar altı hücre oluşur. Hücre etiketine bu kodu barkod olarak basın.</span>
+              </div>
+              <button class="btn btn-quiet" type="submit">Hücreleri ekle</button>
+            </form>
+          </div>
+        </td></tr>
+        {{end}}
+        {{else}}
+        <tr><td colspan="5" class="empty">Bu şubede depo yok.</td></tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+</section>
+{{end}}
+
+<div class="grid-2 section">
+  <form method="post" action="/settings/warehouses" class="panel form-stack" novalidate>
+    {{template "csrf" .}}
+    <h2>Depo ekle</h2>
+    {{with .Err "wh"}}<div class="flash flash-error" role="alert">{{.}}</div>{{end}}
+    <div>
+      <label for="branch_id">Şube</label>
+      <select id="branch_id" name="branch_id">
+        {{range $d.Branches}}<option value="{{.ID}}"{{if eq ($.Val "branch_id") (itoa .ID)}} selected{{end}}>{{.Name}}</option>{{end}}
+      </select>
+    </div>
+    <div class="form-grid">
+      <div><label for="code">Depo kodu</label><input id="code" name="code" type="text" maxlength="12" value="{{.Val "code"}}" placeholder="06"></div>
+      <div><label for="name">Depo adı</label><input id="name" name="name" type="text" maxlength="60" value="{{.Val "name"}}" placeholder="Satış depo"></div>
+    </div>
+    <button class="btn" type="submit">Depoyu ekle</button>
+  </form>
+
+  <form method="post" action="/settings/branches" class="panel form-stack" novalidate>
+    {{template "csrf" .}}
+    <h2>Şube ekle</h2>
+    {{template "field" (fieldOf . "branch_name" "Şube adı" "Örn. İzmir Kuzey" "" true false)}}
+    <button class="btn btn-quiet" type="submit">Şubeyi ekle</button>
+  </form>
+</div>
+{{end}}

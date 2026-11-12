@@ -23,6 +23,13 @@ var (
 	ErrEmptyShipment   = errors.New("sevkiyatta ürün yok")
 	ErrArchivedProduct = errors.New("arşivlenmiş ürüne hareket girilemez")
 	ErrMissingRequired = errors.New("zorunlu alanlar eksik")
+	ErrBinNotFound     = errors.New("bu depoda böyle bir hücre yok")
+	ErrUnknownCode     = errors.New("barkod ya da stok kodu tanınmadı")
+	ErrWrongWarehouse  = errors.New("hücre bu işlemin deposuna ait değil")
+	ErrNotOnShipment   = errors.New("bu ürün sevkiyatta yok")
+	ErrOverPick        = errors.New("sevkiyattaki miktardan fazla okutuldu")
+	ErrSameBin         = errors.New("kaynak ve hedef hücre aynı")
+	ErrOpenCount       = errors.New("bu hücrede açık bir sayım var")
 )
 
 // InsufficientStockError reports which product would go negative.
@@ -31,11 +38,16 @@ type InsufficientStockError struct {
 	Name      string
 	Available Qty
 	Requested Qty
+	Bin       string // set when the check was for one bin
 }
 
 func (e *InsufficientStockError) Error() string {
-	return fmt.Sprintf("%s (%s) için yeterli stok yok: mevcut %s, istenen %s",
-		e.Name, e.SKU, e.Available, e.Requested)
+	where := ""
+	if e.Bin != "" {
+		where = " " + e.Bin + " hücresinde"
+	}
+	return fmt.Sprintf("%s (%s) için%s yeterli stok yok: mevcut %s, istenen %s",
+		e.Name, e.SKU, where, e.Available, e.Requested)
 }
 
 // Store wraps the database handle.

@@ -1,0 +1,24 @@
+{{define "content"}}
+{{$d := .Data}}
+<form method="get" action="/t/hucre" class="t-form" autocomplete="off">
+  <label for="kod">Hücre ya da ürün okutun</label>
+  <input id="kod" name="kod" type="text" class="t-code" autocapitalize="none" spellcheck="false" autofocus>
+  <button type="submit" class="t-btn t-primary">Sorgula</button>
+</form>
+{{with $d.Message}}<p class="t-flash t-error" role="alert" data-result="error">{{.}}</p>{{end}}
+{{with $d.Bin}}
+<h2 class="t-h2">Hücre {{.Code}}</h2>
+<table class="t-table">
+  {{range $d.Rows}}<tr><td><a href="/t/transfer?kaynak={{$d.Bin.Code}}&amp;kod={{.SKU}}">{{.Name}}</a><small>{{.SKU}}</small></td><td class="t-n">{{.Qty}} {{.Unit}}</td></tr>
+  {{else}}<tr><td class="t-empty">Hücre boş.</td></tr>{{end}}
+</table>
+{{end}}
+{{with $d.Product}}
+<h2 class="t-h2">{{.Name}}</h2>
+<p class="t-sub">{{.SKU}}{{if .Barcode}} · {{.Barcode}}{{end}}</p>
+<table class="t-table">
+  {{range $d.Rows}}<tr><td class="t-c"><a href="/t/transfer?kaynak={{.BinCode | binOnly}}&amp;kod={{$d.Product.SKU}}">{{.BinCode | binOnly}}</a></td><td class="t-n">{{.Qty}} {{.Unit}}</td></tr>
+  {{else}}<tr><td class="t-empty">Bu depoda stok yok.</td></tr>{{end}}
+</table>
+{{end}}
+{{end}}

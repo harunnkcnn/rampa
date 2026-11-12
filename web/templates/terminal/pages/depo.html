@@ -1,0 +1,12 @@
+{{define "content"}}
+<form method="post" action="/t/depo" class="t-list">
+  {{template "csrf" .}}
+  {{range $i, $w := .Data}}
+  <button type="submit" name="depo" value="{{$w.ID}}" class="t-item" data-digit="{{add $i 1}}">
+    <span class="t-num">{{add $i 1}}</span><span class="t-item-main"><strong>{{$w.Code}}</strong> {{$w.Name}}<small>{{$w.BranchName}}</small></span>
+  </button>
+  {{else}}
+  <p class="t-note">Size tanımlı depo yok. Yöneticinizden depo yetkisi isteyin.</p>
+  {{end}}
+</form>
+{{end}}

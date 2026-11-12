@@ -44,6 +44,7 @@ type NavItem struct {
 	Group  string // "" for the main group
 	Prefix string // active when the path starts with this; defaults to Href
 	Order  int
+	Admin  bool // shown to administrators only
 }
 
 // Server holds the application's dependencies.
@@ -52,6 +53,7 @@ type Server struct {
 	Store    *store.Store
 	Log      *slog.Logger
 	render   *Renderer
+	term     *Renderer
 	mux      *http.ServeMux
 	nav      []NavItem
 	limiter  *loginLimiter
@@ -81,11 +83,16 @@ func New(ctx context.Context, cfg Config, st *store.Store, log *slog.Logger, ext
 	if err != nil {
 		return nil, err
 	}
+	term, err := newRendererAt(web.FS, "templates/terminal/pages/*.html", "templates/terminal/layout.html")
+	if err != nil {
+		return nil, err
+	}
 	s := &Server{
 		cfg:     cfg,
 		Store:   st,
 		Log:     log,
 		render:  r,
+		term:    term,
 		mux:     http.NewServeMux(),
 		limiter: newLoginLimiter(5, 15*time.Minute),
 		exts:    exts,
@@ -153,6 +160,7 @@ func (s *Server) AddPages(fsys fs.FS, glob string, extra template.FuncMap) error
 // Handler returns the root handler with middleware applied.
 func (s *Server) Handler() http.Handler {
 	var h http.Handler = s.mux
+	h = s.withScopeCache(h)
 	h = s.checkCSRF(h)
 	h = s.loadSession(h)
 	h = securityHeaders(h)

@@ -2,7 +2,7 @@
 
 **Tanıtım sayfası:** https://harunnkcnn.github.io/rampa/
 
-Küçük ve orta ölçekli depolar için stok, giriş/çıkış ve sevkiyat takibi. Tek dosya, kurulum yok: indir, çalıştır, tarayıcıda aç.
+Küçük ve orta ölçekli depolar için stok, hücre (raf gözü) takibi, mal kabul, sevkiyat ve el terminali. Tek dosya, kurulum yok: indir, çalıştır, tarayıcıda aç.
 
 ![Özet ekranı](docs/ozet.png)
 
@@ -10,16 +10,35 @@ Rampa bir depo görevlisinin gününe göre tasarlandı: mal kabul, raf, sevkiya
 
 ## Özellikler
 
-- **Stok kartları:** stok kodu, raf konumu, birim, kritik seviye, birim ağırlık ve hacim
-- **Hareket defteri:** giriş, çıkış ve sayım. Kayıtlar silinmez; düzeltme sayımla yapılır, fark otomatik hesaplanır
-- **Sevkiyat:** taslak → yüklendi → teslim edildi. Yükleme tek işlemde (transaction) yapılır; bir satırda stok yetmezse hiçbir şey düşülmez
+- **Şube, depo ve hücre:** stok hücre bazında tutulur. Her depoda rafa kaldırılmamış mal için bir GENEL hücresi olur; `A-01-1..6` yazarak toplu hücre açılır, hücre etiketleri Code128 barkodla yazdırılır
+- **El terminali (`/t`):** Mal kabul, sevkiyat toplama, kör sayım, hücre sorgu ve transfer, paketleme. Barkod okuyucuyla, dokunmadan kullanılır (ayrıntı aşağıda)
+- **Stok kartları:** stok kodu, barkod, raf konumu, birim, kritik seviye, birim ağırlık ve hacim
+- **Hareket defteri:** giriş, çıkış, sayım ve transfer; her satırda hücre. Kayıtlar silinmez; düzeltme sayımla yapılır, fark otomatik hesaplanır
+- **Mal kabul:** tedarikçi ve irsaliye numarasıyla belge; okutulan her satır anında stoğa girer, son okutma geri alınabilir
+- **Sevkiyat:** taslak → yüklendi → teslim edildi. Terminalde okutulan miktarlar okutulduğu hücreden, kalanlar otomatik olarak depodaki hücrelerden düşer. İptalde her birim çıktığı hücreye döner. Yükleme tek işlemde (transaction) yapılır; stok yetmezse hiçbir şey düşülmez
+- **Paketleme:** sevkiyat için koli ve palet, 100×60 mm koli etiketi
 - **Kritik stok uyarısı** ve günlük özet
 - **CSV dışa aktarım:** Türkçe Excel'de doğru açılır (UTF-8 BOM, noktalı virgül), formül enjeksiyonuna karşı korumalı
 - **Ondalıklı miktar:** kg, metre, litre gibi birimler için `12,5` ya da `1.250` yazılabilir; miktarlar kayan nokta hatası olmadan binde bir hassasiyetle tutulur
-- **Çok kullanıcı:** yönetici ve depo kullanıcısı
+- **Çok kullanıcı:** yönetici ve depo kullanıcısı; kullanıcı bazında depo yetkisi, terminal için PIN
 - **Mobil uyumlu:** rampada telefondan kullanılacak şekilde
 
 <p align="center"><img src="docs/mobil.png" width="300" alt="Ürün ekranı, telefonda"></p>
+
+## El terminali
+
+![Mal kabul ve sevkiyat toplama, 480 px el terminali](docs/terminal.png)
+
+Depo personeli `http://SUNUCU:8080/t` adresini terminalin tarayıcısında açar, kullanıcı adı ve PIN'le girer. Ekranlar 480 px dikey ekran ve tuş takımı için çizildi:
+
+- Okuyucu barkodu yazıp Enter'a bastığında imleç bir sonraki kutuya geçer: hücreyi okut → ürünü okut → kaydedildi. Miktar boş bırakılırsa 1 sayılır.
+- **F1** geri, **F2–F4** ekranın alt çubuğundaki işlemler; menüde **1–5** tuşları.
+- Hata olunca ekran kırmızı olur ve cihaz bip sesi verir (destekleniyorsa titrer).
+- Sayım kördür: kayıttaki miktar gösterilmez. Bitirince fark sayım hareketi olarak işlenir; kayıtta olup okutulmayan ürünler o hücrede sıfırlanır.
+- PIN ile açılan oturum yalnızca terminal ekranlarını açar; yönetim paneline parola gerekir.
+- Sayfalar JavaScript olmadan da çalışan düz formlardır; CSS eski gömülü tarayıcıları da (Windows terminallerdeki IE11 dahil) hedefler.
+
+Kurulum ve okuyucu ayarları için [docs/el-terminali.md](docs/el-terminali.md).
 
 ## Hızlı başlangıç
 
@@ -35,7 +54,8 @@ Rampa bir depo görevlisinin gününe göre tasarlandı: mal kabul, raf, sevkiya
 
 ```bash
 go run ./cmd/rampa-demo -db demo.db
-go run ./cmd/rampa -db demo.db       # giriş: demo / demo-parola
+go run ./cmd/rampa -db demo.db       # panel: demo / demo-parola
+                                     # terminal (/t): depo / PIN 1234
 ```
 
 ## Yapılandırma
@@ -71,7 +91,9 @@ Bağımlılık listesi bilerek kısa: SQLite sürücüsü dışında üçüncü 
 - Parolalar PBKDF2-SHA256, 600.000 tur (OWASP önerisi), sabit zamanlı karşılaştırma
 - Oturum belirteci veritabanında yalnızca SHA-256 özeti olarak tutulur; çerez `HttpOnly` ve `SameSite=Lax`
 - CSRF: oturuma bağlı belirteç + `Sec-Fetch-Site`/`Origin` kontrolü
-- Giriş denemelerinde IP başına hız sınırı; kullanıcı adı var/yok bilgisi zamanlamadan sızmaz
+- Giriş denemelerinde IP başına ve (terminalde) kullanıcı başına hız sınırı; kullanıcı adı var/yok bilgisi zamanlamadan sızmaz
+- Terminal PIN'leri parolalar gibi özetlenir; PIN oturumu yönetim paneline giremez
+- Depo yetkisi sunucuda denetlenir: yetkisi olmayan depo kaydı adres yazılarak da açılamaz
 - Katı Content-Security-Policy (satır içi script ve stil yok), `X-Frame-Options: DENY`
 - Açık yönlendirme (open redirect) koruması, tüm SQL sorguları parametreli
 
@@ -80,9 +102,9 @@ Bağımlılık listesi bilerek kısa: SQLite sürücüsü dışında üçüncü 
 ```
 cmd/rampa          çalıştırılabilir dosya
 cmd/rampa-demo     örnek veri üretici
-app/               HTTP, oturum, şablonlar, eklenti API'si
+app/               HTTP, oturum, panel ve terminal ekranları, Code128, eklenti API'si
 store/             SQLite katmanı, migration'lar, iş kuralları
-web/               gömülü şablonlar ve statik dosyalar
+web/               gömülü şablonlar (panel ve templates/terminal) ve statik dosyalar
 ```
 
 `app.Extension` arayüzü üzerinden yeni ekranlar, menü öğeleri ve tablolar eklenebilir. Çekirdek hiçbir eklentiyi import etmez.

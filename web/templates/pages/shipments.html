@@ -11,6 +11,12 @@
   <summary><h2 class="inline-form">Yeni sevkiyat</h2></summary>
   <form method="post" action="/shipments" class="form-grid section" novalidate>
     {{template "csrf" .}}
+    {{if not .Scope.Current}}
+    <div class="full">
+      <label for="warehouse_id">Çıkış deposu</label>
+      <select id="warehouse_id" name="warehouse_id">{{range .Scope.Warehouses}}<option value="{{.ID}}">{{.Label}}</option>{{end}}</select>
+    </div>
+    {{end}}
     <div class="full">
       <label for="customer">Müşteri / alıcı</label>
       <input id="customer" name="customer" type="text" required maxlength="120">
@@ -42,6 +48,7 @@
       <tr>
         <th scope="col">Kod</th>
         <th scope="col">Müşteri</th>
+        <th scope="col" class="hide-sm">Depo</th>
         <th scope="col" class="hide-sm">Plaka</th>
         <th scope="col" class="num">Satır</th>
         <th scope="col">Durum</th>
@@ -53,13 +60,14 @@
       <tr>
         <td><a class="code" href="/shipments/{{.ID}}">{{.Code}}</a></td>
         <td>{{.Customer}}</td>
+        <td class="hide-sm code">{{.WarehouseCode}}</td>
         <td class="hide-sm code">{{.Plate}}</td>
         <td class="num">{{.ItemCount}}</td>
         <td>{{template "status-tag" .Status}}</td>
         <td class="hide-sm small muted">{{datetime .CreatedAt}}</td>
       </tr>
       {{else}}
-      <tr><td colspan="6" class="empty">Bu sekmede sevkiyat yok.</td></tr>
+      <tr><td colspan="7" class="empty">Bu sekmede sevkiyat yok.</td></tr>
       {{end}}
     </tbody>
   </table>

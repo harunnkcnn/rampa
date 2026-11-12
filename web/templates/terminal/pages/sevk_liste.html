@@ -1,0 +1,11 @@
+{{define "content"}}
+<div class="t-list">
+  {{range $i, $s := .Data}}
+  <a class="t-item" href="/t/sevk/{{$s.ID}}" data-digit="{{add $i 1}}">
+    <span class="t-num">{{add $i 1}}</span><span class="t-item-main"><strong>{{$s.Customer}}</strong><small>{{$s.Code}}{{if $s.Plate}} · {{$s.Plate}}{{end}} · {{$s.ItemCount}} satır</small></span>
+  </a>
+  {{else}}
+  <p class="t-note">Toplanacak sevkiyat yok. Sevkiyatlar panelden açılır.</p>
+  {{end}}
+</div>
+{{end}}

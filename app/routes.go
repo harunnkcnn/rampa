@@ -45,18 +45,38 @@ func (s *Server) routes() {
 
 	s.Handle("GET /shipments", s.handleShipments)
 	s.Handle("POST /shipments", s.handleShipmentCreate)
-	s.Handle("GET /shipments/{id}", s.handleShipmentShow)
-	s.Handle("POST /shipments/{id}", s.handleShipmentUpdate)
-	s.Handle("POST /shipments/{id}/items", s.handleShipmentItemAdd)
-	s.Handle("POST /shipments/{id}/items/{item}/delete", s.handleShipmentItemRemove)
-	s.Handle("POST /shipments/{id}/load", s.handleShipmentLoad)
-	s.Handle("POST /shipments/{id}/deliver", s.handleShipmentDeliver)
-	s.Handle("POST /shipments/{id}/cancel", s.handleShipmentCancel)
+	s.Handle("GET /shipments/{id}", s.guardShipment(s.handleShipmentShow))
+	s.Handle("POST /shipments/{id}", s.guardShipment(s.handleShipmentUpdate))
+	s.Handle("POST /shipments/{id}/items", s.guardShipment(s.handleShipmentItemAdd))
+	s.Handle("POST /shipments/{id}/items/{item}/delete", s.guardShipment(s.handleShipmentItemRemove))
+	s.Handle("POST /shipments/{id}/load", s.guardShipment(s.handleShipmentLoad))
+	s.Handle("POST /shipments/{id}/deliver", s.guardShipment(s.handleShipmentDeliver))
+	s.Handle("POST /shipments/{id}/cancel", s.guardShipment(s.handleShipmentCancel))
+
+	s.Handle("POST /scope", s.handleScope)
+
+	s.Handle("GET /receipts", s.handleReceipts)
+	s.Handle("POST /receipts", s.handleReceiptCreate)
+	s.Handle("GET /receipts/{id}", s.handleReceiptShow)
+	s.Handle("POST /receipts/{id}/close", s.handleReceiptClose)
+
+	s.Handle("GET /packages/{id}/label", s.handlePackageLabel)
+
+	s.Handle("GET /settings/warehouses", s.requireAdmin(s.handleWarehouses))
+	s.Handle("POST /settings/branches", s.requireAdmin(s.handleBranchCreate))
+	s.Handle("POST /settings/warehouses", s.requireAdmin(s.handleWarehouseCreate))
+	s.Handle("POST /settings/warehouses/{id}/bins", s.requireAdmin(s.handleBinsCreate))
+	s.Handle("GET /settings/warehouses/{id}/labels", s.requireAdmin(s.handleBinLabels))
+	s.Handle("POST /settings/warehouses/{id}/active", s.requireAdmin(s.handleWarehouseActive))
+	s.Handle("POST /settings/users/{id}/pin", s.requireAdmin(s.handleUserPIN))
+	s.Handle("POST /settings/users/{id}/warehouses", s.requireAdmin(s.handleUserWarehouses))
 
 	s.Handle("GET /settings", s.handleSettings)
 	s.Handle("POST /settings/company", s.handleSettingsCompany)
 	s.Handle("POST /settings/password", s.handleSettingsPassword)
 	s.Handle("POST /settings/users", s.handleSettingsUserCreate)
+
+	s.terminalRoutes()
 
 	s.mux.Handle("/", s.requireUser(http.HandlerFunc(s.NotFound)))
 
@@ -64,7 +84,10 @@ func (s *Server) routes() {
 		NavItem{Label: "Özet", Href: "/", Order: 10},
 		NavItem{Label: "Ürünler", Href: "/products", Order: 20},
 		NavItem{Label: "Hareketler", Href: "/movements", Order: 30},
+		NavItem{Label: "Mal kabul", Href: "/receipts", Order: 35},
 		NavItem{Label: "Sevkiyatlar", Href: "/shipments", Order: 40},
+		NavItem{Label: "El terminali", Href: "/t", Order: 60},
+		NavItem{Label: "Depolar ve hücreler", Href: "/settings/warehouses", Order: 890, Group: "Hesap", Admin: true},
 		NavItem{Label: "Ayarlar", Href: "/settings", Order: 900, Group: "Hesap"},
 	)
 }

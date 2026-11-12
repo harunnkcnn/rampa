@@ -1,0 +1,33 @@
+{{define "content"}}
+{{$d := .Data}}{{$r := $d.Receipt}}
+<p class="t-sub">{{$r.Supplier}}{{if $r.DocNo}} · {{$r.DocNo}}{{end}}</p>
+{{if $r.Open}}
+<form method="post" action="/t/kabul/{{$r.ID}}" class="t-form t-scan" autocomplete="off">
+  {{template "csrf" .}}
+  <div class="t-row">
+    <div class="t-col">
+      <label for="hucre">Hücre</label>
+      <input id="hucre" name="hucre" type="text" value="{{.Val "hucre"}}" placeholder="GENEL" data-next="kod" autocapitalize="characters" {{if not (.Val "hucre")}}autofocus{{end}}>
+    </div>
+    <div class="t-col t-qty">
+      <label for="miktar">Miktar</label>
+      <input id="miktar" name="miktar" type="text" inputmode="decimal" placeholder="1" data-next="kod">
+    </div>
+  </div>
+  <label for="kod">Ürün barkodu</label>
+  <input id="kod" name="kod" type="text" class="t-code" autocapitalize="none" spellcheck="false" {{if .Val "hucre"}}autofocus{{end}}>
+  <button type="submit" class="t-btn t-primary">Kaydet</button>
+</form>
+{{end}}
+<h2 class="t-h2">Son okutulanlar · toplam {{$r.Units}}</h2>
+<table class="t-table">
+  {{range $d.Lines}}<tr><td>{{.Name}}<small>{{.SKU}}</small></td><td class="t-c">{{.BinCode}}</td><td class="t-n">{{.Qty}}</td></tr>
+  {{else}}<tr><td class="t-empty">Henüz okutma yok.</td></tr>{{end}}
+</table>
+{{if $r.Open}}
+<div class="t-actions">
+  <form id="undo" method="post" action="/t/kabul/{{$r.ID}}/geri">{{template "csrf" .}}<input type="hidden" name="hucre" value="{{.Val "hucre"}}"><button type="submit" class="t-btn">Son okutmayı geri al</button></form>
+  <form id="finish" method="post" action="/t/kabul/{{$r.ID}}/bitir" data-confirm="Kabul kapatılsın mı?">{{template "csrf" .}}<button type="submit" class="t-btn">Kabulü bitir</button></form>
+</div>
+{{end}}
+{{end}}

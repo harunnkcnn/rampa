@@ -1,0 +1,33 @@
+{{define "content"}}
+{{$r := .Data.Receipt}}
+<div class="page-head">
+  <div>
+    <div class="ship-head">
+      <h1 class="code">{{$r.Code}}</h1>
+      {{if $r.Open}}<span class="tag tag-draft">Açık</span>{{else}}<span class="tag tag-delivered">Kapandı</span>{{end}}
+    </div>
+    <p class="sub">{{$r.Supplier}}{{if $r.DocNo}} · İrsaliye {{$r.DocNo}}{{end}} · Depo {{$r.WarehouseCode}}</p>
+  </div>
+  <div class="actions no-print">
+    <button class="btn btn-quiet" type="button" data-print>Yazdır</button>
+    {{if $r.Open}}
+    <a class="btn btn-quiet" href="/t/kabul/{{$r.ID}}">Terminalde okut</a>
+    <form method="post" action="/receipts/{{$r.ID}}/close" class="inline-form">{{template "csrf" .}}<button class="btn" type="submit">Kabulü kapat</button></form>
+    {{end}}
+  </div>
+</div>
+
+<div class="table-wrap">
+  <table>
+    <thead><tr><th scope="col">Ürün</th><th scope="col">Hücre</th><th scope="col" class="num">Miktar</th></tr></thead>
+    <tbody>
+      {{range .Data.Lines}}
+      <tr><td><a href="/products/{{.ProductID}}">{{.Name}}</a> <span class="sku muted small">{{.SKU}}</span></td><td class="code">{{.BinCode}}</td><td class="num">{{.Qty}} {{.Unit}}</td></tr>
+      {{else}}
+      <tr><td colspan="3" class="empty">Henüz ürün okutulmadı.</td></tr>
+      {{end}}
+    </tbody>
+  </table>
+</div>
+<p class="totals small"><span><strong>{{$r.Lines}}</strong> çeşit</span><span>Toplam <strong>{{$r.Units}}</strong> birim</span><span>Açıldı {{datetime $r.CreatedAt}}</span>{{if $r.ClosedAt}}<span>Kapandı {{ptime $r.ClosedAt}}</span>{{end}}</p>
+{{end}}

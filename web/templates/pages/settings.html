@@ -1,46 +1,18 @@
 {{define "content"}}
+{{$d := .Data}}
 <div class="page-head"><h1>Ayarlar</h1></div>
 
 <div class="grid-2">
-  <div>
-    <form method="post" action="/settings/company" class="panel form-stack">
-      {{template "csrf" .}}
-      <h2>İşletme</h2>
-      <div>
-        <label for="company">İşletme adı</label>
-        <input id="company" name="company" type="text" maxlength="80" value="{{.Val "company"}}">
-        <span class="hint">Menüde ve yazdırılan sevk belgesinde görünür.</span>
-      </div>
-      <button class="btn btn-quiet" type="submit">Kaydet</button>
-    </form>
-
-    <section class="panel" aria-labelledby="users-h">
-      <h2 id="users-h">Kullanıcılar</h2>
-      <div class="table-wrap section">
-        <table>
-          <tbody>
-            {{range .Data.Users}}
-            <tr><td>{{.Username}}</td><td class="muted small">{{if .IsAdmin}}Yönetici{{else}}Depo kullanıcısı{{end}}</td><td class="num small muted">{{date .CreatedAt}}</td></tr>
-            {{end}}
-          </tbody>
-        </table>
-      </div>
-      {{if .User.IsAdmin}}
-      <form method="post" action="/settings/users" class="form-stack section" novalidate>
-        {{template "csrf" .}}
-        <h3>Kullanıcı ekle</h3>
-        {{template "field" (fieldOf . "new_username" "Kullanıcı adı" "" "" true false)}}
-        <div>
-          <label for="new_password">Geçici parola</label>
-          <input id="new_password" name="new_password" type="password" autocomplete="new-password" minlength="10"{{with .Err "new_password"}} aria-invalid="true" aria-describedby="np-err"{{end}}>
-          {{with .Err "new_password"}}<span class="field-error" id="np-err">{{.}}</span>{{else}}<span class="hint">En az 10 karakter. Kullanıcı ilk girişte Ayarlar'dan değiştirebilir.</span>{{end}}
-        </div>
-        <label class="check"><input type="checkbox" name="new_admin" value="1"> Yönetici yetkisi ver</label>
-        <button class="btn btn-quiet" type="submit">Kullanıcıyı ekle</button>
-      </form>
-      {{end}}
-    </section>
-  </div>
+  <form method="post" action="/settings/company" class="panel form-stack">
+    {{template "csrf" .}}
+    <h2>İşletme</h2>
+    <div>
+      <label for="company">İşletme adı</label>
+      <input id="company" name="company" type="text" maxlength="80" value="{{.Val "company"}}">
+      <span class="hint">Menüde, sevk belgesinde ve koli etiketinde görünür.</span>
+    </div>
+    <button class="btn btn-quiet" type="submit">Kaydet</button>
+  </form>
 
   <form method="post" action="/settings/password" class="panel form-stack" novalidate>
     {{template "csrf" .}}
@@ -63,4 +35,65 @@
     <button class="btn" type="submit">Parolayı değiştir</button>
   </form>
 </div>
+
+<section class="section" id="users" aria-labelledby="users-h">
+  <div class="section-head">
+    <h2 id="users-h">Kullanıcılar</h2>
+  </div>
+  {{if .User.IsAdmin}}<p class="small muted">El terminalinde kullanıcı adı ve PIN ile girilir. PIN 4–8 rakam olur; yalnızca terminal ekranlarını açar, yönetim paneline parola gerekir.</p>{{end}}
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th scope="col">Kullanıcı</th>
+          <th scope="col">Rol</th>
+          {{if .User.IsAdmin}}<th scope="col">Terminal PIN</th><th scope="col">Depolar</th>{{end}}
+        </tr>
+      </thead>
+      <tbody>
+        {{range $u := $d.Users}}
+        <tr>
+          <td><strong>{{$u.Username}}</strong><br><span class="small muted">{{date $u.CreatedAt}}</span></td>
+          <td class="small">{{if $u.IsAdmin}}Yönetici{{else}}Depo kullanıcısı{{end}}</td>
+          {{if $.User.IsAdmin}}
+          <td>
+            <form method="post" action="/settings/users/{{$u.ID}}/pin" class="row-form">
+              {{template "csrf" $}}
+              <label class="visually-hidden" for="pin-{{$u.ID}}">{{$u.Username}} PIN</label>
+              <input id="pin-{{$u.ID}}" name="pin" type="password" inputmode="numeric" autocomplete="new-password" maxlength="8" placeholder="{{if $u.HasPIN}}••••{{else}}yok{{end}}">
+              <button class="btn btn-quiet" type="submit">{{if $u.HasPIN}}Değiştir{{else}}Ver{{end}}</button>
+            </form>
+            {{if $u.HasPIN}}<span class="small muted">PIN tanımlı. Boş gönderirseniz kaldırılır.</span>{{end}}
+          </td>
+          <td>
+            {{if $u.IsAdmin}}<span class="small muted">Tüm depolar</span>{{else}}
+            <form method="post" action="/settings/users/{{$u.ID}}/warehouses" class="row-form wrap">
+              {{template "csrf" $}}
+              {{range $d.Warehouses}}<label class="check"><input type="checkbox" name="warehouse" value="{{.ID}}"{{if index (index $d.Access $u.ID) .ID}} checked{{end}}> {{.Code}}</label>{{end}}
+              <button class="btn btn-quiet" type="submit">Kaydet</button>
+            </form>
+            {{end}}
+          </td>
+          {{end}}
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+
+  {{if .User.IsAdmin}}
+  <form method="post" action="/settings/users" class="panel form-stack section narrow" novalidate>
+    {{template "csrf" .}}
+    <h3>Kullanıcı ekle</h3>
+    {{template "field" (fieldOf . "new_username" "Kullanıcı adı" "Terminalde de bu ad yazılır; sicil numarası olabilir." "" true false)}}
+    <div>
+      <label for="new_password">Geçici parola</label>
+      <input id="new_password" name="new_password" type="password" autocomplete="new-password" minlength="10"{{with .Err "new_password"}} aria-invalid="true" aria-describedby="np-err"{{end}}>
+      {{with .Err "new_password"}}<span class="field-error" id="np-err">{{.}}</span>{{else}}<span class="hint">En az 10 karakter. Kullanıcı Ayarlar'dan değiştirebilir.</span>{{end}}
+    </div>
+    <label class="check"><input type="checkbox" name="new_admin" value="1"> Yönetici yetkisi ver</label>
+    <button class="btn btn-quiet" type="submit">Kullanıcıyı ekle</button>
+  </form>
+  {{end}}
+</section>
 {{end}}

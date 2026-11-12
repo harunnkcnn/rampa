@@ -12,6 +12,7 @@
   <div class="form-grid">
     {{template "field" (fieldOf . "sku" "Stok kodu" "" "" true false)}}
     {{template "field" (fieldOf . "name" "Ürün adı" "" "" true false)}}
+    {{template "field" (fieldOf . "barcode" "Barkod" "Terminalde okutulacak kod (EAN, üretici kodu…). Boş bırakılırsa stok kodu okutulur." "" false false)}}
     {{template "field" (fieldOf . "unit" "Birim" "adet, kg, koli, m…" "" false false)}}
     {{template "field" (fieldOf . "location" "Raf / konum" "Örn. A-03-2" "" false false)}}
     {{template "field" (fieldOf . "min_stock" "Kritik stok seviyesi" "Stok bu değere inince listede uyarı çıkar. Boş bırakılırsa uyarı yok." "decimal" false false)}}

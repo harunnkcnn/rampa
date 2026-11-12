@@ -759,6 +759,39 @@ legend {
   outline-offset: -3px;
 }
 
+.locations {
+  margin: var(--s4) 0;
+  max-width: 26rem;
+}
+.small-head {
+  margin-bottom: var(--s2);
+  font-size: 0.875rem;
+}
+table.compact td {
+  padding: 0.3rem var(--s2);
+}
+.scope {
+  margin: 0 var(--s2) var(--s5);
+}
+.scope label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #98a29b;
+}
+.scope select {
+  min-height: 2.2rem;
+  padding: 0.3rem 0.5rem;
+  background: rgb(255 255 255 / 0.08);
+  color: #fff;
+  border-color: rgb(255 255 255 / 0.25);
+}
+.scope select option {
+  color: var(--ink);
+}
+.scope-name {
+  font-weight: 650;
+  color: #fff;
+}
 .meta-list {
   display: grid;
   grid-template-columns: max-content 1fr;
@@ -962,6 +995,13 @@ legend {
   .edition {
     display: none;
   }
+  .scope {
+    order: 2;
+    margin: 0;
+  }
+  .scope label {
+    display: none;
+  }
   .main {
     padding: var(--s5) var(--s4) var(--s6);
   }
@@ -1008,4 +1048,80 @@ legend {
     border-color: #999;
     background: #fff;
   }
+}
+
+/* ---------- Sites, bins, packages ---------- */
+
+.row-form {
+  display: flex;
+  gap: var(--s2);
+  align-items: center;
+}
+.row-form.wrap {
+  flex-wrap: wrap;
+  gap: var(--s2) var(--s3);
+}
+.row-form input[type="password"] {
+  width: 7rem;
+  min-height: 2.2rem;
+}
+.row-form .btn {
+  min-height: 2.2rem;
+  padding: 0.3rem 0.75rem;
+}
+.narrow {
+  max-width: 30rem;
+}
+.bins-row > td {
+  background: #ebede8;
+}
+.bins-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: var(--s5);
+  padding: var(--s2) 0;
+}
+.bin-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.bin-chips li {
+  padding: 0.1rem 0.45rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 3px;
+  background: #fff;
+  font-size: 0.8125rem;
+}
+.pkg-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.pkg-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--s2);
+  padding: var(--s2) 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 0.875rem;
+}
+.pkg-list li:last-child {
+  border-bottom: 0;
+}
+@media (max-width: 760px) {
+  .bins-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.section > h2 + .table-wrap,
+.section > h2 + .section {
+  margin-top: var(--s3);
+}
+.table-wrap + .panel {
+  margin-top: var(--s5);
 }

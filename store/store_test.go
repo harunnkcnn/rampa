@@ -75,15 +75,15 @@ func TestMovements(t *testing.T) {
 	s := newTestStore(t)
 	id := mustProduct(t, s, "P1", 5)
 
-	if _, err := s.RecordMovement(ctx, MovementInput{ProductID: id, Kind: MoveIn, Qty: QtyFromInt(10)}); err != nil {
+	if _, err := s.RecordMovement(ctx, MovementInput{ProductID: id, BinID: 1, Kind: MoveIn, Qty: QtyFromInt(10)}); err != nil {
 		t.Fatal(err)
 	}
-	_, err := s.RecordMovement(ctx, MovementInput{ProductID: id, Kind: MoveOut, Qty: QtyFromInt(11)})
+	_, err := s.RecordMovement(ctx, MovementInput{ProductID: id, BinID: 1, Kind: MoveOut, Qty: QtyFromInt(11)})
 	var ise *InsufficientStockError
 	if !errors.As(err, &ise) || ise.Available != QtyFromInt(10) {
 		t.Fatalf("want InsufficientStockError, got %v", err)
 	}
-	if _, err := s.RecordMovement(ctx, MovementInput{ProductID: id, Kind: MoveOut, Qty: QtyFromInt(6)}); err != nil {
+	if _, err := s.RecordMovement(ctx, MovementInput{ProductID: id, BinID: 1, Kind: MoveOut, Qty: QtyFromInt(6)}); err != nil {
 		t.Fatal(err)
 	}
 	p, _ := s.GetProduct(ctx, id)
@@ -91,10 +91,10 @@ func TestMovements(t *testing.T) {
 		t.Fatalf("stock = %v low=%v", p.Stock, p.Low())
 	}
 	// Count says 7: adjust +3.
-	if _, err := s.RecordMovement(ctx, MovementInput{ProductID: id, Kind: MoveAdjust, Qty: QtyFromInt(7)}); err != nil {
+	if _, err := s.RecordMovement(ctx, MovementInput{ProductID: id, BinID: 1, Kind: MoveAdjust, Qty: QtyFromInt(7)}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := s.RecordMovement(ctx, MovementInput{ProductID: id, Kind: MoveAdjust, Qty: QtyFromInt(7)}); !errors.Is(err, ErrNoChange) {
+	if _, err := s.RecordMovement(ctx, MovementInput{ProductID: id, BinID: 1, Kind: MoveAdjust, Qty: QtyFromInt(7)}); !errors.Is(err, ErrNoChange) {
 		t.Fatalf("want ErrNoChange, got %v", err)
 	}
 	p, _ = s.GetProduct(ctx, id)
@@ -116,8 +116,8 @@ func TestShipmentLifecycle(t *testing.T) {
 	s := newTestStore(t)
 	a := mustProduct(t, s, "A", 0)
 	b := mustProduct(t, s, "B", 0)
-	s.RecordMovement(ctx, MovementInput{ProductID: a, Kind: MoveIn, Qty: QtyFromInt(10)})
-	s.RecordMovement(ctx, MovementInput{ProductID: b, Kind: MoveIn, Qty: QtyFromInt(2)})
+	s.RecordMovement(ctx, MovementInput{ProductID: a, BinID: 1, Kind: MoveIn, Qty: QtyFromInt(10)})
+	s.RecordMovement(ctx, MovementInput{ProductID: b, BinID: 1, Kind: MoveIn, Qty: QtyFromInt(2)})
 
 	sid, err := s.CreateShipment(ctx, ShipmentHeader{Customer: "Atlas Yapı", Plate: "34 abc  123"}, 0)
 	if err != nil {
@@ -180,7 +180,7 @@ func TestSessions(t *testing.T) {
 	if _, err := s.CreateUser(ctx, "HARUN", "hash", false); !errors.Is(err, ErrDuplicate) {
 		t.Fatalf("usernames are case-insensitive, got %v", err)
 	}
-	s.CreateSession(ctx, "tok", "csrf", uid, now.Add(time.Hour))
+	s.CreateSession(ctx, "tok", "csrf", uid, now.Add(time.Hour), false)
 	if ss, err := s.GetSession(ctx, "tok"); err != nil || ss.User.Username != "harun" {
 		t.Fatalf("session = %+v, %v", ss, err)
 	}

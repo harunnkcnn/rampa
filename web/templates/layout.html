@@ -22,6 +22,20 @@
         <span class="brand-stripe" aria-hidden="true"></span>
         {{with .Company}}<span class="brand-company">{{.}}</span>{{end}}
       </a>
+      {{if .Scope.Multi}}
+      <form class="scope" method="post" action="/scope">
+        <input type="hidden" name="_csrf" value="{{.CSRF}}">
+        <input type="hidden" name="back" value="{{.Path}}">
+        <label for="scope-wh">Çalışılan depo</label>
+        <select id="scope-wh" name="warehouse_id" data-autosubmit>
+          {{if .Scope.CanAll}}<option value="0"{{if not .Scope.Current}} selected{{end}}>Tüm depolar</option>{{end}}
+          {{range .Scope.Warehouses}}<option value="{{.ID}}"{{if and $.Scope.Current (eq .ID $.Scope.Current.ID)}} selected{{end}}>{{.Label}}</option>{{end}}
+        </select>
+        <noscript><button class="btn btn-quiet" type="submit">Seç</button></noscript>
+      </form>
+      {{else if .Scope.Current}}
+      <p class="scope small"><span class="scope-name">{{.Scope.Current.Label}}</span></p>
+      {{end}}
       <nav class="nav" aria-label="Ana menü">
         {{range .Nav}}
         <div class="nav-group">

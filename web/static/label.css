@@ -1,0 +1,98 @@
+/* Thermal label sheet: one 100 × 60 mm label per page. */
+@page {
+  size: 100mm 60mm;
+  margin: 0;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  font-family: "Archivo", system-ui, sans-serif;
+  color: #000;
+  background: #e4e6e1;
+}
+.toolbar {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  background: #1a211d;
+  color: #fff;
+  font-size: 0.9rem;
+}
+.toolbar button {
+  padding: 0.45rem 1rem;
+  font: inherit;
+  font-weight: 650;
+  background: #edb518;
+  border: 1px solid #000;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.toolbar a {
+  color: #fff;
+}
+.label {
+  width: 100mm;
+  height: 60mm;
+  margin: 1rem auto;
+  padding: 3mm 4mm;
+  background: #fff;
+  overflow: hidden;
+  page-break-after: always;
+  break-after: page;
+}
+.label p {
+  margin: 0;
+  line-height: 1.15;
+}
+.label-company {
+  font-size: 8pt;
+}
+.label-title {
+  font-size: 11pt;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.label-big {
+  margin: 1mm 0;
+  font-size: 20pt;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+.label-line {
+  font-size: 8.5pt;
+}
+.label-code {
+  margin-top: 1.5mm;
+}
+.label-code .barcode {
+  display: block;
+  width: 100%;
+  height: 14mm;
+}
+.label-text {
+  font-size: 9pt;
+  font-weight: 600;
+  text-align: center;
+  letter-spacing: 0.04em;
+}
+.barcode-missing {
+  display: block;
+  padding: 4mm 0;
+  font-size: 9pt;
+}
+@media print {
+  body {
+    background: #fff;
+  }
+  .no-print {
+    display: none;
+  }
+  .label {
+    margin: 0;
+  }
+}

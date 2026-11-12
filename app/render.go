@@ -25,12 +25,16 @@ type Renderer struct {
 
 // NewRenderer parses the core layout, partials and pages from fsys.
 func NewRenderer(fsys fs.FS) (*Renderer, error) {
-	base, err := template.New("base").Funcs(Funcs()).ParseFS(fsys, "templates/layout.html", "templates/partials/*.html")
+	return newRendererAt(fsys, "templates/pages/*.html", "templates/layout.html", "templates/partials/*.html")
+}
+
+func newRendererAt(fsys fs.FS, pages string, base ...string) (*Renderer, error) {
+	t, err := template.New("base").Funcs(Funcs()).ParseFS(fsys, base...)
 	if err != nil {
 		return nil, err
 	}
-	r := &Renderer{base: base, pages: map[string]*template.Template{}}
-	return r, r.AddPages(fsys, "templates/pages/*.html", nil)
+	r := &Renderer{base: t, pages: map[string]*template.Template{}}
+	return r, r.AddPages(fsys, pages, nil)
 }
 
 // AddPages parses each file matching glob as its own page.
@@ -94,6 +98,7 @@ type Page struct {
 	Data    any
 	Path    string
 	Styles  []string
+	Scope   Scope
 }
 
 // NavGroup is a titled block of sidebar links.
@@ -131,7 +136,8 @@ func (s *Server) Page(r *http.Request, title, active string) *Page {
 		u := ss.User
 		p.User = &u
 		p.CSRF = ss.CSRF
-		p.Nav = s.navFor(r.URL.Path)
+		p.Nav = s.navFor(r.URL.Path, u.IsAdmin)
+		p.Scope, _ = s.ScopeOf(r)
 		for _, fn := range s.afterNav {
 			p.Notices = append(p.Notices, fn(r)...)
 		}
@@ -140,8 +146,13 @@ func (s *Server) Page(r *http.Request, title, active string) *Page {
 	return p
 }
 
-func (s *Server) navFor(cur string) []NavGroup {
-	items := append([]NavItem{}, s.nav...)
+func (s *Server) navFor(cur string, admin bool) []NavGroup {
+	var items []NavItem
+	for _, it := range s.nav {
+		if !it.Admin || admin {
+			items = append(items, it)
+		}
+	}
 	sort.SliceStable(items, func(i, j int) bool { return items[i].Order < items[j].Order })
 	var groups []NavGroup
 	idx := map[string]int{}
@@ -238,6 +249,13 @@ func Funcs() template.FuncMap {
 			return template.URL("?" + v.Encode())
 		},
 		"itoa": func(n int64) string { return strconv.FormatInt(n, 10) },
+		// binOnly turns "06/A-01-1" into "A-01-1".
+		"binOnly": func(s string) string {
+			if i := strings.LastIndex(s, "/"); i >= 0 {
+				return s[i+1:]
+			}
+			return s
+		},
 		"fieldOf": func(p *Page, name, label, hint, mode string, required, full bool) Field {
 			return Field{Name: name, Label: label, Hint: hint, Mode: mode, Required: required, Full: full,
 				Value: p.Val(name), Err: p.Err(name)}

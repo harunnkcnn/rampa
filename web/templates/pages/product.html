@@ -44,7 +44,18 @@
     <p class="gauge-caption">
       {{if $d.Gauge.HasMin}}Sarı çizgi kritik seviye: {{$p.MinStock}} {{$p.Unit}}.{{else}}Kritik seviye tanımlı değil. <a href="/products/{{$p.ID}}/edit">Seviye ekle</a>{{end}}
     </p>
+    <section class="locations" aria-labelledby="loc-h">
+      <h3 id="loc-h" class="small-head">Hücrelerdeki stok <span class="muted">({{$d.ScopeName}})</span></h3>
+      {{if $d.Locations}}
+      <table class="compact">
+        <tbody>
+          {{range $d.Locations}}<tr><td class="code">{{.BinCode}}</td><td class="num">{{.Qty}} {{.Unit}}</td></tr>{{end}}
+        </tbody>
+      </table>
+      {{else}}<p class="small muted">Bu kapsamda stok yok.</p>{{end}}
+    </section>
     <dl class="meta-list small">
+      {{if $p.Barcode}}<dt>Barkod</dt><dd class="code">{{$p.Barcode}}</dd>{{end}}
       {{if $p.WeightKg}}<dt>Birim ağırlık</dt><dd>{{num $p.WeightKg 3}} kg</dd>{{end}}
       {{if $p.VolumeM3}}<dt>Birim hacim</dt><dd>{{num $p.VolumeM3 4}} m³</dd>{{end}}
       <dt>Kayıt</dt><dd>{{date $p.CreatedAt}}</dd>
@@ -64,8 +75,15 @@
         <input type="radio" id="k-out" name="kind" value="out"{{if eq $d.Kind "out"}} checked{{end}}><label for="k-out">Çıkış</label>
         <input type="radio" id="k-adj" name="kind" value="adjust"{{if eq $d.Kind "adjust"}} checked{{end}}><label for="k-adj">Sayım</label>
       </div>
-      <span class="hint">Sayım: rafta saydığınız miktarı girin, fark otomatik düzeltilir.</span>
+      <span class="hint">Sayım: seçili hücrede saydığınız miktarı girin, fark otomatik düzeltilir.</span>
     </fieldset>
+    <div>
+      <label for="bin_id">Hücre</label>
+      <select id="bin_id" name="bin_id" required>
+        {{range $d.Bins}}<option value="{{.ID}}"{{if eq .ID $d.BinID}} selected{{end}}>{{.WarehouseCode}} / {{.Code}}</option>{{end}}
+      </select>
+      {{if not $d.Bins}}<span class="field-error">Bu depoda hücre yok. Ayarlar &gt; Depolar'dan ekleyin.</span>{{end}}
+    </div>
     <div>
       <label for="qty">Miktar ({{$p.Unit}})</label>
       <input id="qty" name="qty" type="text" inputmode="decimal" autocomplete="off" required value="{{.Val "qty"}}" data-autofocus>

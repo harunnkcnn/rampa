@@ -1,0 +1,31 @@
+{{define "layout"}}<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{.Title}} · Rampa</title>
+  <link rel="stylesheet" href="/static/terminal.css?v={{.Version}}">
+  <link rel="icon" href="/static/icon.svg" type="image/svg+xml">
+  <script src="/static/terminal.js?v={{.Version}}" defer></script>
+</head>
+<body class="t">
+  <header class="t-head">
+    <span class="t-depo">{{with .Warehouse}}{{.Code}}{{else}}Rampa{{end}}</span>
+    <h1>{{.Title}}</h1>
+    <span class="t-user">{{with .User}}{{.Username}}{{end}}</span>
+  </header>
+  {{with .Flash}}<div class="t-flash t-{{.Kind}}" role="{{if eq .Kind "error"}}alert{{else}}status{{end}}" data-result="{{.Kind}}">{{.Text}}</div>{{end}}
+  <main class="t-main">
+    {{template "content" .}}
+  </main>
+  {{if .Keys}}
+  <nav class="t-keys" aria-label="Kısayol tuşları">
+    {{range .Keys}}{{if .Href}}<a href="{{.Href}}" data-key="{{.Key}}"><b>{{.Key}}</b>{{.Label}}</a>{{else}}<button type="button" data-submit="{{.Form}}" data-key="{{.Key}}"><b>{{.Key}}</b>{{.Label}}</button>{{end}}{{end}}
+  </nav>
+  {{end}}
+</body>
+</html>
+{{end}}
+
+{{define "csrf"}}<input type="hidden" name="_csrf" value="{{.CSRF}}">{{end}}

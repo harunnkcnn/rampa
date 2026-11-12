@@ -1,0 +1,20 @@
+{{define "content"}}
+<form method="post" action="/t/transfer" class="t-form t-scan" autocomplete="off">
+  {{template "csrf" .}}
+  <label for="kaynak">Kaynak hücre</label>
+  <input id="kaynak" name="kaynak" type="text" value="{{.Val "kaynak"}}" data-next="kod" autocapitalize="characters" {{if not (.Val "kaynak")}}autofocus{{end}}>
+  <div class="t-row">
+    <div class="t-col">
+      <label for="kod">Ürün</label>
+      <input id="kod" name="kod" type="text" class="t-code" value="{{.Val "kod"}}" data-next="miktar" autocapitalize="none" spellcheck="false" {{if and (.Val "kaynak") (not (.Val "kod"))}}autofocus{{end}}>
+    </div>
+    <div class="t-col t-qty">
+      <label for="miktar">Miktar</label>
+      <input id="miktar" name="miktar" type="text" inputmode="decimal" placeholder="1" data-next="hedef" {{if and (.Val "kaynak") (.Val "kod")}}autofocus{{end}}>
+    </div>
+  </div>
+  <label for="hedef">Hedef hücre</label>
+  <input id="hedef" name="hedef" type="text" value="{{.Val "hedef"}}" autocapitalize="characters">
+  <button type="submit" class="t-btn t-primary">Taşı</button>
+</form>
+{{end}}

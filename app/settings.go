@@ -9,7 +9,9 @@ import (
 )
 
 type settingsData struct {
-	Users []store.User
+	Users      []store.User
+	Warehouses []store.Warehouse
+	Access     map[int64]map[int64]bool // user id → warehouse id
 }
 
 func (s *Server) renderSettings(w http.ResponseWriter, r *http.Request, p *Page, status int) {
@@ -18,7 +20,25 @@ func (s *Server) renderSettings(w http.ResponseWriter, r *http.Request, p *Page,
 		s.ServerError(w, r, err)
 		return
 	}
-	p.Data = settingsData{Users: users}
+	d := settingsData{Users: users, Access: map[int64]map[int64]bool{}}
+	if p.User != nil && p.User.IsAdmin {
+		if d.Warehouses, err = s.Store.ListWarehouses(r.Context(), true); err != nil {
+			s.ServerError(w, r, err)
+			return
+		}
+		for _, u := range users {
+			ws, err := s.Store.UserWarehouses(r.Context(), u.ID, u.IsAdmin)
+			if err != nil {
+				s.ServerError(w, r, err)
+				return
+			}
+			d.Access[u.ID] = map[int64]bool{}
+			for _, wh := range ws {
+				d.Access[u.ID][wh.ID] = true
+			}
+		}
+	}
+	p.Data = d
 	if _, ok := p.Form["company"]; !ok {
 		p.Form.Set("company", p.Company)
 	}
@@ -93,7 +113,20 @@ func (s *Server) handleSettingsUserCreate(w http.ResponseWriter, r *http.Request
 			s.ServerError(w, r, err)
 			return
 		}
-		_, err = s.Store.CreateUser(r.Context(), username, hash, r.PostFormValue("new_admin") == "1")
+		admin := r.PostFormValue("new_admin") == "1"
+		var uid int64
+		uid, err = s.Store.CreateUser(r.Context(), username, hash, admin)
+		if err == nil && !admin {
+			// New staff may use every current warehouse until narrowed.
+			var ws []store.Warehouse
+			if ws, err = s.Store.ListWarehouses(r.Context(), true); err == nil {
+				ids := make([]int64, len(ws))
+				for i, wh := range ws {
+					ids[i] = wh.ID
+				}
+				err = s.Store.SetUserWarehouses(r.Context(), uid, ids)
+			}
+		}
 		switch {
 		case errors.Is(err, store.ErrDuplicate):
 			p.Errors["new_username"] = "Bu kullanıcı adı alınmış."

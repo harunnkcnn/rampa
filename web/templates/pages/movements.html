@@ -3,7 +3,7 @@
 <div class="page-head">
   <div>
     <h1>Hareketler</h1>
-    <p class="sub">Tüm giriş, çıkış ve sayım kayıtları. Kayıtlar silinmez; düzeltme için sayım girin.</p>
+    <p class="sub">{{.Scope.Label}}: giriş, çıkış, sayım ve hücre transferleri. Kayıtlar silinmez; düzeltme için sayım girin.</p>
   </div>
   <div class="actions">
     <a class="btn btn-quiet" href="/movements.csv{{query "kind" $d.Kind "from" $d.From "to" $d.To}}">CSV indir</a>
@@ -18,6 +18,7 @@
       <option value="in"{{if eq $d.Kind "in"}} selected{{end}}>Giriş</option>
       <option value="out"{{if eq $d.Kind "out"}} selected{{end}}>Çıkış</option>
       <option value="adjust"{{if eq $d.Kind "adjust"}} selected{{end}}>Sayım</option>
+      <option value="transfer"{{if eq $d.Kind "transfer"}} selected{{end}}>Transfer</option>
     </select>
   </div>
   <div>

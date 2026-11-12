@@ -14,6 +14,7 @@
         <th scope="col">Tarih</th>
         {{if not .HideProduct}}<th scope="col">Ürün</th>{{end}}
         <th scope="col">Tür</th>
+        <th scope="col" class="hide-sm">Hücre</th>
         <th scope="col" class="num">Miktar</th>
         <th scope="col" class="hide-sm">Açıklama</th>
         <th scope="col" class="hide-sm">Kullanıcı</th>
@@ -25,12 +26,13 @@
         <td class="small">{{datetime .CreatedAt}}</td>
         {{if not $.HideProduct}}<td><a href="/products/{{.ProductID}}">{{.ProductName}}</a> <span class="sku muted small">{{.ProductSKU}}</span></td>{{end}}
         <td>{{template "kind-tag" .Kind}}</td>
+        <td class="hide-sm code small">{{.Where}}</td>
         <td class="num {{if gt .Qty 0}}qty-in{{else}}qty-out{{end}}">{{signed .Qty}} {{.Unit}}</td>
-        <td class="hide-sm">{{if .ShipmentID}}<a href="/shipments/{{.ShipmentID}}" class="code">{{.ShipmentCode}}</a> {{end}}{{.Note}}</td>
+        <td class="hide-sm">{{if .ShipmentID}}<a href="/shipments/{{.ShipmentID}}" class="code">{{.ShipmentCode}}</a> {{end}}{{if .ReceiptID}}<a href="/receipts/{{.ReceiptID}}" class="code">{{.ReceiptCode}}</a> {{end}}{{.Note}}</td>
         <td class="hide-sm muted">{{.UserName}}</td>
       </tr>
       {{else}}
-      <tr><td colspan="6" class="empty">Henüz hareket yok.</td></tr>
+      <tr><td colspan="7" class="empty">Henüz hareket yok.</td></tr>
       {{end}}
     </tbody>
   </table>

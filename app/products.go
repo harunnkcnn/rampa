@@ -23,9 +23,13 @@ func (s *Server) handleProducts(w http.ResponseWriter, r *http.Request) {
 		Low:      q.Get("low") == "1",
 		Archived: q.Get("archived") == "1",
 	}
-	var err error
+	sc, err := s.ScopeOf(r)
+	if err != nil {
+		s.ServerError(w, r, err)
+		return
+	}
 	d.Products, err = s.Store.ListProducts(r.Context(), store.ProductFilter{
-		Query: d.Query, LowOnly: d.Low, IncludeArchived: d.Archived,
+		Query: d.Query, LowOnly: d.Low, IncludeArchived: d.Archived, WarehouseID: sc.ID(),
 	})
 	if err != nil {
 		s.ServerError(w, r, err)
@@ -43,6 +47,7 @@ func (s *Server) handleProducts(w http.ResponseWriter, r *http.Request) {
 func productForm(p store.Product) map[string][]string {
 	return map[string][]string{
 		"sku":       {p.SKU},
+		"barcode":   {p.Barcode},
 		"name":      {p.Name},
 		"unit":      {p.Unit},
 		"location":  {p.Location},
@@ -77,6 +82,7 @@ func parseProduct(r *http.Request, page *Page) store.Product {
 	page.Form = f
 	p := store.Product{
 		SKU:      f.Get("sku"),
+		Barcode:  f.Get("barcode"),
 		Name:     f.Get("name"),
 		Unit:     f.Get("unit"),
 		Location: f.Get("location"),
@@ -120,6 +126,8 @@ func (s *Server) handleProductCreate(w http.ResponseWriter, r *http.Request) {
 	if len(page.Errors) == 0 {
 		id, err := s.Store.CreateProduct(r.Context(), prod)
 		switch {
+		case errors.Is(err, store.ErrDuplicateBarcode):
+			page.Errors["barcode"] = "Bu barkod başka bir üründe kayıtlı."
 		case errors.Is(err, store.ErrDuplicate):
 			page.Errors["sku"] = "Bu stok kodu başka bir üründe kullanılıyor."
 		case err != nil:
@@ -140,6 +148,10 @@ type productData struct {
 	Kind      string
 	Message   *Flash
 	Gauge     gauge
+	Locations []store.BinStock // where the product sits in the current scope
+	Bins      []store.Bin      // choices for the movement form
+	BinID     int64
+	ScopeName string
 }
 
 // gauge positions the stock bar and the critical-level marker on a 0–400 scale.
@@ -161,11 +173,27 @@ func newGauge(p store.Product) gauge {
 
 func (s *Server) loadProductData(r *http.Request, id int64) (productData, error) {
 	var d productData
-	var err error
-	if d.Product, err = s.Store.GetProduct(r.Context(), id); err != nil {
+	sc, err := s.ScopeOf(r)
+	if err != nil {
 		return d, err
 	}
-	d.Movements, err = s.Store.ListMovements(r.Context(), store.MovementFilter{ProductID: id, Limit: 50})
+	d.ScopeName = sc.Label()
+	if d.Product, err = s.Store.GetProductIn(r.Context(), id, max(sc.ID(), 0)); err != nil {
+		return d, err
+	}
+	if sc.ID() < 0 {
+		d.Product.Stock = 0
+	}
+	if d.Locations, err = s.Store.ProductBins(r.Context(), id, sc.ID()); err != nil {
+		return d, err
+	}
+	if d.Bins, d.BinID, err = s.binChoices(r); err != nil {
+		return d, err
+	}
+	if v, err := strconv.ParseInt(r.PostFormValue("bin_id"), 10, 64); err == nil && v > 0 {
+		d.BinID = v
+	}
+	d.Movements, err = s.Store.ListMovements(r.Context(), store.MovementFilter{ProductID: id, WarehouseID: sc.ID(), Limit: 50})
 	d.Kind = string(store.MoveIn)
 	d.Gauge = newGauge(d.Product)
 	return d, err
@@ -238,6 +266,8 @@ func (s *Server) handleProductUpdate(w http.ResponseWriter, r *http.Request) {
 	if len(page.Errors) == 0 {
 		err := s.Store.UpdateProduct(r.Context(), prod)
 		switch {
+		case errors.Is(err, store.ErrDuplicateBarcode):
+			page.Errors["barcode"] = "Bu barkod başka bir üründe kayıtlı."
 		case errors.Is(err, store.ErrDuplicate):
 			page.Errors["sku"] = "Bu stok kodu başka bir üründe kullanılıyor."
 		case err != nil:
@@ -286,12 +316,30 @@ func (s *Server) handleMovementCreate(w http.ResponseWriter, r *http.Request) {
 	var msg *Flash
 	status := http.StatusOK
 
-	if !kind.Valid() || qerr != nil {
+	binID, _ := strconv.ParseInt(r.PostFormValue("bin_id"), 10, 64)
+	if binID == 0 {
+		// No bin chosen: book into GENEL of the current warehouse.
+		if _, def, err := s.binChoices(r); err == nil {
+			binID = def
+		}
+	}
+	bin, binErr := s.Store.GetBin(r.Context(), binID)
+	sc, err := s.ScopeOf(r)
+	if err != nil {
+		s.ServerError(w, r, err)
+		return
+	}
+
+	switch {
+	case !kind.Valid() || qerr != nil:
 		msg = &Flash{Kind: "error", Text: "Miktarı sayı olarak girin, örn. 12 ya da 12,5."}
 		status = http.StatusUnprocessableEntity
-	} else {
+	case binErr != nil || !sc.Allows(bin.WarehouseID):
+		msg = &Flash{Kind: "error", Text: "Hücre seçin."}
+		status = http.StatusUnprocessableEntity
+	default:
 		_, err := s.Store.RecordMovement(r.Context(), store.MovementInput{
-			ProductID: id, Kind: kind, Qty: qty, Note: r.PostFormValue("note"), UserID: UserID(r),
+			ProductID: id, BinID: bin.ID, Kind: kind, Qty: qty, Note: r.PostFormValue("note"), UserID: UserID(r),
 		})
 		if err != nil {
 			text := UserMessage(err)

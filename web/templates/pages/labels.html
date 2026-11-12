@@ -1,0 +1,29 @@
+{{define "content"}}{{end}}
+{{define "labels-page"}}<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Etiket · Rampa</title>
+  <link rel="stylesheet" href="/static/label.css">
+  <script src="/static/app.js" defer></script>
+</head>
+<body>
+  <div class="toolbar no-print">
+    <button type="button" data-print autofocus>Yazdır</button>
+    {{if .Back}}<a href="{{.Back}}">Geri dön</a>{{end}}
+    <span>{{len .Labels}} etiket · 100 × 60 mm</span>
+  </div>
+  {{range .Labels}}
+  <section class="label">
+    <p class="label-company">{{$.Company}}</p>
+    {{with .Title}}<p class="label-title">{{.}}</p>{{end}}
+    <p class="label-big">{{.Big}}</p>
+    {{range .Lines}}<p class="label-line">{{.}}</p>{{end}}
+    <div class="label-code">{{.Barcode}}</div>
+    <p class="label-text">{{.Code}}</p>
+  </section>
+  {{end}}
+</body>
+</html>
+{{end}}

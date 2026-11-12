@@ -15,7 +15,12 @@ type shipmentsData struct {
 
 func (s *Server) handleShipments(w http.ResponseWriter, r *http.Request) {
 	tab := r.URL.Query().Get("tab")
-	f := store.ShipmentFilter{Limit: 200}
+	sc, err := s.ScopeOf(r)
+	if err != nil {
+		s.ServerError(w, r, err)
+		return
+	}
+	f := store.ShipmentFilter{Limit: 200, WarehouseID: sc.ID()}
 	switch tab {
 	case "delivered":
 		f.Status = store.ShipDelivered
@@ -46,7 +51,22 @@ func headerFromForm(r *http.Request) store.ShipmentHeader {
 }
 
 func (s *Server) handleShipmentCreate(w http.ResponseWriter, r *http.Request) {
-	id, err := s.Store.CreateShipment(r.Context(), headerFromForm(r), UserID(r))
+	sc, err := s.ScopeOf(r)
+	if err != nil {
+		s.ServerError(w, r, err)
+		return
+	}
+	h := headerFromForm(r)
+	h.WarehouseID, _ = strconv.ParseInt(r.PostFormValue("warehouse_id"), 10, 64)
+	if h.WarehouseID == 0 && sc.Current != nil {
+		h.WarehouseID = sc.Current.ID
+	}
+	if !sc.Allows(h.WarehouseID) {
+		SetFlash(w, "error", "Sevkiyatın çıkacağı depoyu seçin.")
+		http.Redirect(w, r, "/shipments", http.StatusSeeOther)
+		return
+	}
+	id, err := s.Store.CreateShipment(r.Context(), h, UserID(r))
 	if errors.Is(err, store.ErrMissingRequired) {
 		SetFlash(w, "error", "Sevkiyat için müşteri ya da alıcı adı girin.")
 		http.Redirect(w, r, "/shipments", http.StatusSeeOther)
@@ -63,6 +83,7 @@ func shipmentURL(id int64) string { return "/shipments/" + strconv.FormatInt(id,
 
 type shipmentData struct {
 	Shipment store.Shipment
+	Packages []store.Package
 	Products []store.Product
 	Message  *Flash
 	// Extras lets extensions append panels (e.g. vehicle fit) to the page.
@@ -78,6 +99,30 @@ type ShipmentPanel struct {
 // ShipmentPanelFunc builds extension panels for a shipment page.
 type ShipmentPanelFunc func(r *http.Request, sh store.Shipment) (ShipmentPanel, bool)
 
+// guardShipment hides shipments of warehouses the user may not use.
+func (s *Server) guardShipment(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		id, ok := PathID(r, "id")
+		if !ok {
+			s.NotFound(w, r)
+			return
+		}
+		sc, err := s.ScopeOf(r)
+		if err != nil {
+			s.ServerError(w, r, err)
+			return
+		}
+		if !sc.CanAll {
+			var wh int64
+			if err := s.Store.DB.QueryRowContext(r.Context(), `SELECT warehouse_id FROM shipments WHERE id = ?`, id).Scan(&wh); err != nil || !sc.Allows(wh) {
+				s.NotFound(w, r)
+				return
+			}
+		}
+		next(w, r)
+	}
+}
+
 // AddShipmentPanel registers a panel provider for the shipment page.
 func (s *Server) AddShipmentPanel(fn ShipmentPanelFunc) { s.panels = append(s.panels, fn) }
 
@@ -87,8 +132,11 @@ func (s *Server) loadShipmentData(r *http.Request, id int64) (shipmentData, erro
 	if d.Shipment, err = s.Store.GetShipment(r.Context(), id); err != nil {
 		return d, err
 	}
+	if d.Packages, err = s.Store.ListPackages(r.Context(), id); err != nil {
+		return d, err
+	}
 	if d.Shipment.Editable() {
-		if d.Products, err = s.Store.ListProducts(r.Context(), store.ProductFilter{}); err != nil {
+		if d.Products, err = s.Store.ListProducts(r.Context(), store.ProductFilter{WarehouseID: d.Shipment.WarehouseID}); err != nil {
 			return d, err
 		}
 	}

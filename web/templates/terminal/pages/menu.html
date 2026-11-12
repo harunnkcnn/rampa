@@ -1,0 +1,11 @@
+{{define "content"}}
+{{$d := .Data}}
+<nav class="t-list" aria-label="İşlemler">
+  <a class="t-item" href="/t/kabul" data-digit="1"><span class="t-num">1</span><span class="t-item-main">Mal kabul{{if $d.OpenReceipts}}<small>{{$d.OpenReceipts}} açık kabul</small>{{end}}</span></a>
+  <a class="t-item" href="/t/sevk" data-digit="2"><span class="t-num">2</span><span class="t-item-main">Sevkiyat toplama{{if $d.Drafts}}<small>{{$d.Drafts}} sevkiyat bekliyor</small>{{end}}</span></a>
+  <a class="t-item" href="/t/sayim" data-digit="3"><span class="t-num">3</span><span class="t-item-main">Sayım<small>Hücre bazında</small></span></a>
+  <a class="t-item" href="/t/hucre" data-digit="4"><span class="t-num">4</span><span class="t-item-main">Hücre takibi<small>Sorgu ve transfer</small></span></a>
+  <a class="t-item" href="/t/paket" data-digit="5"><span class="t-num">5</span><span class="t-item-main">Paketleme{{if $d.ToPack}}<small>{{$d.ToPack}} açık sevkiyat</small>{{end}}</span></a>
+</nav>
+<form id="logout" method="post" action="/t/cikis" class="t-actions">{{template "csrf" .}}<button type="submit" class="t-btn">Çıkış yap</button></form>
+{{end}}

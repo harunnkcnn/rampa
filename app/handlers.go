@@ -30,7 +30,14 @@ func UserMessage(err error) string {
 		errors.Is(err, store.ErrEmptyShipment),
 		errors.Is(err, store.ErrArchivedProduct),
 		errors.Is(err, store.ErrInvalidQty),
-		errors.Is(err, store.ErrMissingRequired):
+		errors.Is(err, store.ErrMissingRequired),
+		errors.Is(err, store.ErrBinNotFound),
+		errors.Is(err, store.ErrUnknownCode),
+		errors.Is(err, store.ErrWrongWarehouse),
+		errors.Is(err, store.ErrNotOnShipment),
+		errors.Is(err, store.ErrOverPick),
+		errors.Is(err, store.ErrSameBin),
+		errors.Is(err, store.ErrDuplicateBarcode):
 		msg := []rune(err.Error())
 		return strings.ToUpper(string(msg[:1])) + string(msg[1:]) + "."
 	}
@@ -53,22 +60,28 @@ type dashboardData struct {
 func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	now := s.Store.Now()
-	ov, err := s.Store.GetOverview(ctx, startOfDay(now))
+	sc, err := s.ScopeOf(r)
 	if err != nil {
 		s.ServerError(w, r, err)
 		return
 	}
-	low, err := s.Store.ListProducts(ctx, store.ProductFilter{LowOnly: true, Limit: 8})
+	wh := sc.ID()
+	ov, err := s.Store.GetOverview(ctx, startOfDay(now), wh)
 	if err != nil {
 		s.ServerError(w, r, err)
 		return
 	}
-	open, err := s.Store.ListShipments(ctx, store.ShipmentFilter{Open: true, Limit: 6})
+	low, err := s.Store.ListProducts(ctx, store.ProductFilter{LowOnly: true, Limit: 8, WarehouseID: wh})
 	if err != nil {
 		s.ServerError(w, r, err)
 		return
 	}
-	recent, err := s.Store.ListMovements(ctx, store.MovementFilter{Limit: 8})
+	open, err := s.Store.ListShipments(ctx, store.ShipmentFilter{Open: true, Limit: 6, WarehouseID: wh})
+	if err != nil {
+		s.ServerError(w, r, err)
+		return
+	}
+	recent, err := s.Store.ListMovements(ctx, store.MovementFilter{Limit: 8, WarehouseID: wh})
 	if err != nil {
 		s.ServerError(w, r, err)
 		return

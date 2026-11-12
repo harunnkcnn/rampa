@@ -13,6 +13,7 @@ type User struct {
 	ID           int64
 	Username     string
 	PasswordHash string
+	PINHash      string
 	IsAdmin      bool
 	CreatedAt    time.Time
 }
@@ -44,7 +45,7 @@ func (s *Store) CreateUser(ctx context.Context, username, passwordHash string, a
 
 // ListUsers returns all accounts.
 func (s *Store) ListUsers(ctx context.Context) ([]User, error) {
-	rows, err := s.DB.QueryContext(ctx, `SELECT id, username, '', is_admin, created_at FROM users ORDER BY username`)
+	rows, err := s.DB.QueryContext(ctx, `SELECT id, username, '', CASE WHEN pin_hash <> '' THEN 'x' ELSE '' END, is_admin, created_at FROM users ORDER BY username`)
 	if err != nil {
 		return nil, err
 	}
@@ -60,10 +61,13 @@ func (s *Store) ListUsers(ctx context.Context) ([]User, error) {
 	return out, rows.Err()
 }
 
+// HasPIN reports whether the user can sign in on a handheld terminal.
+func (u User) HasPIN() bool { return u.PINHash != "" }
+
 func scanUser(sc interface{ Scan(...any) error }) (User, error) {
 	var u User
 	var created int64
-	err := sc.Scan(&u.ID, &u.Username, &u.PasswordHash, &u.IsAdmin, &created)
+	err := sc.Scan(&u.ID, &u.Username, &u.PasswordHash, &u.PINHash, &u.IsAdmin, &created)
 	u.CreatedAt = fromUnix(created)
 	return u, err
 }
@@ -71,7 +75,7 @@ func scanUser(sc interface{ Scan(...any) error }) (User, error) {
 // GetUserByUsername loads an account including its password hash.
 func (s *Store) GetUserByUsername(ctx context.Context, username string) (User, error) {
 	u, err := scanUser(s.DB.QueryRowContext(ctx, `
-		SELECT id, username, password_hash, is_admin, created_at FROM users WHERE username = ?`,
+		SELECT id, username, password_hash, pin_hash, is_admin, created_at FROM users WHERE username = ?`,
 		strings.TrimSpace(username)))
 	if errors.Is(err, sql.ErrNoRows) {
 		return u, ErrNotFound
@@ -82,7 +86,7 @@ func (s *Store) GetUserByUsername(ctx context.Context, username string) (User, e
 // GetUser loads an account by id including its password hash.
 func (s *Store) GetUser(ctx context.Context, id int64) (User, error) {
 	u, err := scanUser(s.DB.QueryRowContext(ctx, `
-		SELECT id, username, password_hash, is_admin, created_at FROM users WHERE id = ?`, id))
+		SELECT id, username, password_hash, pin_hash, is_admin, created_at FROM users WHERE id = ?`, id))
 	if errors.Is(err, sql.ErrNoRows) {
 		return u, ErrNotFound
 	}
@@ -104,19 +108,36 @@ func (s *Store) SetPasswordHash(ctx context.Context, userID int64, hash, keepTok
 	})
 }
 
+// SetPINHash sets or clears (empty hash) a user's terminal PIN.
+func (s *Store) SetPINHash(ctx context.Context, userID int64, hash string) error {
+	res, err := s.DB.ExecContext(ctx, `UPDATE users SET pin_hash = ? WHERE id = ?`, hash, userID)
+	if err != nil {
+		return err
+	}
+	return mustAffect(res)
+}
+
 // Session is a signed-in browser.
 type Session struct {
-	TokenHash string
-	CSRF      string
-	ExpiresAt time.Time
-	User      User
+	TokenHash   string
+	CSRF        string
+	ExpiresAt   time.Time
+	WarehouseID int64 // 0 = all warehouses (panel) or not chosen yet (terminal)
+	Terminal    bool  // opened with a PIN; handheld screens only
+	User        User
+}
+
+// SetSessionWarehouse stores the warehouse a session works in.
+func (s *Store) SetSessionWarehouse(ctx context.Context, tokenHash string, warehouseID int64) error {
+	_, err := s.DB.ExecContext(ctx, `UPDATE sessions SET warehouse_id = ? WHERE token_hash = ?`, nullID(warehouseID), tokenHash)
+	return err
 }
 
 // CreateSession stores a hashed session token.
-func (s *Store) CreateSession(ctx context.Context, tokenHash, csrf string, userID int64, expires time.Time) error {
+func (s *Store) CreateSession(ctx context.Context, tokenHash, csrf string, userID int64, expires time.Time, terminal bool) error {
 	_, err := s.DB.ExecContext(ctx, `
-		INSERT INTO sessions (token_hash, user_id, csrf, expires_at) VALUES (?, ?, ?, ?)`,
-		tokenHash, userID, csrf, unix(expires))
+		INSERT INTO sessions (token_hash, user_id, csrf, expires_at, terminal) VALUES (?, ?, ?, ?, ?)`,
+		tokenHash, userID, csrf, unix(expires), terminal)
 	return err
 }
 
@@ -125,10 +146,10 @@ func (s *Store) GetSession(ctx context.Context, tokenHash string) (Session, erro
 	var ss Session
 	var exp, created int64
 	err := s.DB.QueryRowContext(ctx, `
-		SELECT s.token_hash, s.csrf, s.expires_at, u.id, u.username, u.is_admin, u.created_at
+		SELECT s.token_hash, s.csrf, s.expires_at, COALESCE(s.warehouse_id, 0), s.terminal, u.id, u.username, u.is_admin, u.created_at
 		FROM sessions s JOIN users u ON u.id = s.user_id
 		WHERE s.token_hash = ? AND s.expires_at > ?`, tokenHash, unix(s.now())).
-		Scan(&ss.TokenHash, &ss.CSRF, &exp, &ss.User.ID, &ss.User.Username, &ss.User.IsAdmin, &created)
+		Scan(&ss.TokenHash, &ss.CSRF, &exp, &ss.WarehouseID, &ss.Terminal, &ss.User.ID, &ss.User.Username, &ss.User.IsAdmin, &created)
 	if errors.Is(err, sql.ErrNoRows) {
 		return ss, ErrNotFound
 	}

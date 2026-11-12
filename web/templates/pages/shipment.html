@@ -6,13 +6,14 @@
       <h1 class="code">{{$sh.Code}}</h1>
       {{template "status-tag" $sh.Status}}
     </div>
-    <p class="sub">{{$sh.Customer}}{{if $sh.Plate}} · {{$sh.Plate}}{{end}}{{if $sh.Driver}} · {{$sh.Driver}}{{end}}</p>
+    <p class="sub">{{$sh.Customer}}{{if $sh.Plate}} · {{$sh.Plate}}{{end}}{{if $sh.Driver}} · {{$sh.Driver}}{{end}} · Depo {{$sh.WarehouseCode}}</p>
   </div>
   <div class="actions no-print">
     <button class="btn btn-quiet" type="button" data-print>Yazdır</button>
     {{if eq $sh.Status "draft"}}
+    <a class="btn btn-quiet" href="/t/sevk/{{$sh.ID}}">Terminalde topla</a>
     <form method="post" action="/shipments/{{$sh.ID}}/load" class="inline-form"
-          hx-post="/shipments/{{$sh.ID}}/load" hx-confirm="Sevkiyat yüklensin mi? Tüm satırlar stoktan düşülecek.">
+          hx-post="/shipments/{{$sh.ID}}/load" hx-confirm="Sevkiyat yüklensin mi? Okutulan miktarlar okutulduğu hücreden, kalanlar otomatik olarak depodaki hücrelerden düşülecek.">
       {{template "csrf" .}}<button class="btn btn-go" type="submit">Yükle ve stoktan düş</button>
     </form>
     {{end}}
@@ -70,6 +71,17 @@
         {{if $sh.DeliveredAt}}<dt>Teslim</dt><dd>{{ptime $sh.DeliveredAt}}</dd>{{end}}
       </dl>
     </div>
+    {{if .Data.Packages}}
+    <div class="panel">
+      <h2>Paketler</h2>
+      <ul class="pkg-list section">
+        {{range .Data.Packages}}
+        <li><span><span class="code">{{.Code}}</span> · {{.KindLabel}}, {{.Units}} birim{{if .Open}} <span class="tag tag-draft">Açık</span>{{end}}</span>
+          <a class="small no-print" href="/packages/{{.ID}}/label?back=/shipments/{{$sh.ID}}">Etiket</a></li>
+        {{end}}
+      </ul>
+    </div>
+    {{end}}
     {{range .Data.Extras}}
     <div class="panel no-print">
       <h2>{{.Title}}</h2>
@@ -90,7 +102,7 @@
         <tr>
           <th scope="col">Ürün</th>
           <th scope="col" class="num">Miktar</th>
-          {{if $sh.Editable}}<th scope="col" class="num">Stok</th><th scope="col"><span class="visually-hidden">İşlem</span></th>{{end}}
+          {{if $sh.Editable}}<th scope="col" class="num">Toplanan</th><th scope="col" class="num">Depoda</th><th scope="col"><span class="visually-hidden">İşlem</span></th>{{end}}
         </tr>
       </thead>
       <tbody>
@@ -99,6 +111,7 @@
           <td><a href="/products/{{.ProductID}}">{{.Name}}</a> <span class="sku muted small">{{.SKU}}</span></td>
           <td class="num">{{.Qty}} {{.Unit}}</td>
           {{if $sh.Editable}}
+          <td class="num{{if ge .Picked .Qty}} qty-in{{else}} muted{{end}}">{{.Picked}}</td>
           <td class="num{{if .Short}} qty-out{{else}} muted{{end}}">{{.Stock}}{{if .Short}} <span class="visually-hidden">yetersiz</span>{{end}}</td>
           <td class="num">
             <form method="post" action="/shipments/{{$sh.ID}}/items/{{.ID}}/delete" class="inline-form"
@@ -109,7 +122,7 @@
           {{end}}
         </tr>
         {{else}}
-        <tr><td colspan="4" class="empty">Yük listesi boş. Aşağıdan ürün ekleyin.</td></tr>
+        <tr><td colspan="5" class="empty">Yük listesi boş. Aşağıdan ürün ekleyin.</td></tr>
         {{end}}
       </tbody>
     </table>

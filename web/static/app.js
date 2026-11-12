@@ -14,3 +14,9 @@ document.addEventListener("htmx:afterSwap", (e) => {
   const focus = target.querySelector("[data-autofocus]");
   if (focus) focus.focus();
 });
+
+// Submit selects marked data-autosubmit (warehouse switcher).
+document.addEventListener("change", (e) => {
+  const el = e.target;
+  if (el.matches && el.matches("select[data-autosubmit]") && el.form) el.form.submit();
+});

@@ -1,0 +1,27 @@
+{{define "content"}}
+{{$c := .Data}}
+<form method="post" action="/t/sayim/{{$c.ID}}" class="t-form t-scan" autocomplete="off">
+  {{template "csrf" .}}
+  <div class="t-row">
+    <div class="t-col t-qty">
+      <label for="miktar">Miktar</label>
+      <input id="miktar" name="miktar" type="text" inputmode="decimal" placeholder="1" data-next="kod">
+    </div>
+    <div class="t-col">
+      <label for="kod">Ürün barkodu</label>
+      <input id="kod" name="kod" type="text" class="t-code" autocapitalize="none" spellcheck="false" autofocus>
+    </div>
+  </div>
+  <button type="submit" class="t-btn t-primary">Say</button>
+  <p class="t-hint">Yanlış okutmayı düzeltmek için miktara -1 yazıp tekrar okutun.</p>
+</form>
+<h2 class="t-h2">Sayılanlar</h2>
+<table class="t-table">
+  {{range $c.Scanned}}<tr><td>{{.Name}}<small>{{.SKU}}</small></td><td class="t-n">{{.Counted}} {{.Unit}}</td></tr>
+  {{else}}<tr><td class="t-empty">Henüz okutma yok.</td></tr>{{end}}
+</table>
+<div class="t-actions">
+  <a class="t-btn" href="/t/sayim/{{$c.ID}}/bitir">Sayımı bitir</a>
+  <form id="cancel" method="post" action="/t/sayim/{{$c.ID}}/iptal" data-confirm="Sayım iptal edilsin mi? Stok değişmez.">{{template "csrf" .}}<button type="submit" class="t-btn">İptal et</button></form>
+</div>
+{{end}}

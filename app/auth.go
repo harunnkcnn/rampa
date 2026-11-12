@@ -69,6 +69,11 @@ func (s *Server) loadSession(next http.Handler) http.Handler {
 
 func (s *Server) requireUser(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if ss := SessionFrom(r.Context()); ss != nil && ss.Terminal {
+			// PIN sessions are limited to the handheld screens.
+			Redirect(w, r, "/t")
+			return
+		}
 		if SessionFrom(r.Context()) == nil {
 			n, err := s.Store.CountUsers(r.Context())
 			if err != nil {
@@ -125,9 +130,13 @@ func (s *Server) checkCSRF(next http.Handler) http.Handler {
 }
 
 func (s *Server) startSession(w http.ResponseWriter, r *http.Request, userID int64) error {
+	return s.openSession(w, r, userID, false)
+}
+
+func (s *Server) openSession(w http.ResponseWriter, r *http.Request, userID int64, terminal bool) error {
 	tok := randomToken(32)
 	exp := s.Store.Now().Add(s.cfg.SessionTTL)
-	if err := s.Store.CreateSession(r.Context(), hashToken(tok), randomToken(24), userID, exp); err != nil {
+	if err := s.Store.CreateSession(r.Context(), hashToken(tok), randomToken(24), userID, exp, terminal); err != nil {
 		return err
 	}
 	http.SetCookie(w, &http.Cookie{

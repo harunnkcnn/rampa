@@ -2,7 +2,8 @@
 // Rampa out. It refuses to touch a database that already has products.
 //
 //	go run ./cmd/rampa-demo -db demo.db
-//	go run ./cmd/rampa -db demo.db   # sign in: demo / demo-parola
+//	go run ./cmd/rampa -db demo.db   # panel: demo / demo-parola
+//	                                  # handheld (/t): depo / PIN 1234
 package main
 
 import (
@@ -40,6 +41,25 @@ var catalog = []seedProduct{
 }
 
 var customers = []string{"Atlas Oto Servis", "Kuzey Yedek Parça", "Marmara Filo", "Ege Otomotiv", "Bursa Lastik ve Bakım"}
+
+// Fictional suppliers.
+var suppliers = []string{"Anadolu Filtre A.Ş.", "Kuzey Fren Sistemleri", "Ege Madeni Yağ"}
+
+// demoEAN returns a valid EAN-13 in the 200–299 range GS1 reserves for
+// in-store use, so sample codes never collide with real products.
+func demoEAN(n int) string {
+	base := fmt.Sprintf("200000%06d", n)
+	sum := 0
+	for i, r := range base {
+		d := int(r - '0')
+		if i%2 == 1 {
+			d *= 3
+		}
+		sum += d
+	}
+	return base + fmt.Sprint((10-sum%10)%10)
+}
+
 var plates = []string{"34 KLM 482", "16 BDR 115", "35 EGE 903", "41 TRS 207"}
 
 func main() {
@@ -71,6 +91,33 @@ func run(path string) error {
 	}
 	_ = st.SetSetting(ctx, "company_name", "Örnek Yedek Parça Deposu")
 
+	// Two warehouses: shelves in the main one, a small branch store.
+	bins := map[string]int64{}
+	if _, err := st.CreateBins(ctx, 1, []string{"A-01-1", "A-01-2", "A-02-1", "B-01-1", "B-02-1", "C-01-1", "C-02-1", "C-03-1"}); err != nil {
+		return err
+	}
+	all, _ := st.ListBins(ctx, 1)
+	for _, b := range all {
+		bins[b.Code] = b.ID
+	}
+	br, err := st.CreateBranch(ctx, "Ege şube")
+	if err != nil {
+		return err
+	}
+	wh2, err := st.CreateWarehouse(ctx, br, "02", "Şube satış depo")
+	if err != nil {
+		return err
+	}
+	st.CreateBins(ctx, wh2, []string{"R-1", "R-2", "R-3"})
+	shelf2, _ := st.FindBin(ctx, wh2, "R-1")
+
+	worker, err := st.CreateUser(ctx, "depo", mustHash("depo-parola-1"), false)
+	if err != nil {
+		return err
+	}
+	st.SetPINHash(ctx, worker, mustHash("1234"))
+	st.SetUserWarehouses(ctx, worker, []int64{1, wh2})
+
 	rng := rand.New(rand.NewPCG(42, 7))
 	now := time.Now()
 	y, m, d := now.AddDate(0, 0, -45).Date()
@@ -81,7 +128,7 @@ func run(path string) error {
 	ids := make([]int64, len(catalog))
 	for i, c := range catalog {
 		ids[i], err = st.CreateProduct(ctx, store.Product{
-			SKU: c.sku, Name: c.name, Unit: c.unit, Location: c.loc,
+			SKU: c.sku, Barcode: demoEAN(i + 1), Name: c.name, Unit: c.unit, Location: c.loc,
 			MinStock: store.QtyFromInt(c.min), WeightKg: c.kg, VolumeM3: c.m3,
 		})
 		if err != nil {
@@ -89,9 +136,14 @@ func run(path string) error {
 		}
 		opening := int64(c.daily*20) + c.min
 		if _, err := st.RecordMovement(ctx, store.MovementInput{
-			ProductID: ids[i], Kind: store.MoveIn, Qty: store.QtyFromInt(opening), Note: "Açılış stoğu", UserID: uid,
+			ProductID: ids[i], BinID: bins[c.loc[:4]+"-1"], Kind: store.MoveIn, Qty: store.QtyFromInt(opening),
+			Note: "Açılış stoğu", UserID: uid,
 		}); err != nil {
 			return err
+		}
+		if i%3 == 0 {
+			st.RecordMovement(ctx, store.MovementInput{ProductID: ids[i], BinID: shelf2.ID, Kind: store.MoveIn,
+				Qty: store.QtyFromInt(c.min / 2), Note: "Açılış stoğu", UserID: uid})
 		}
 	}
 
@@ -104,7 +156,7 @@ func run(path string) error {
 		for n := 0; n < 1+rng.IntN(2); n++ {
 			clock = clock.Add(time.Duration(30+rng.IntN(120)) * time.Minute)
 			sid, err := st.CreateShipment(ctx, store.ShipmentHeader{
-				Customer: customers[rng.IntN(len(customers))], Plate: plates[rng.IntN(len(plates))], Driver: "",
+				WarehouseID: 1, Customer: customers[rng.IntN(len(customers))], Plate: plates[rng.IntN(len(plates))], Driver: "",
 			}, uid)
 			if err != nil {
 				return err
@@ -127,18 +179,24 @@ func run(path string) error {
 		// Weekly restock of whatever is low.
 		if day%7 == 0 {
 			clock = clock.Add(2 * time.Hour)
-			low, _ := st.ListProducts(ctx, store.ProductFilter{LowOnly: true})
+			low, _ := st.ListProducts(ctx, store.ProductFilter{LowOnly: true, WarehouseID: 1})
+			rid, err := st.CreateReceipt(ctx, 1, suppliers[day/7%len(suppliers)], fmt.Sprintf("IRS%06d", 4100+day), uid)
+			if err != nil {
+				return err
+			}
+			gen, _ := st.DefaultBin(ctx, 1)
 			for _, p := range low {
 				if rng.IntN(3) == 0 {
 					continue // some stay low on purpose
 				}
-				_, _ = st.RecordMovement(ctx, store.MovementInput{
-					ProductID: p.ID, Kind: store.MoveIn, Qty: p.MinStock * 3, Note: "Haftalık tedarik", UserID: uid,
-				})
+				_ = st.Receive(ctx, rid, gen.ID, p.ID, p.MinStock*3, uid)
+			}
+			if day < 42 {
+				_ = st.CloseReceipt(ctx, rid)
 			}
 		}
 	}
-	fmt.Printf("Örnek veri hazır: %s\nGiriş: demo / demo-parola\n", path)
+	fmt.Printf("Örnek veri hazır: %s\nPanel: demo / demo-parola · El terminali (/t): depo / PIN 1234\n", path)
 	return nil
 }
 

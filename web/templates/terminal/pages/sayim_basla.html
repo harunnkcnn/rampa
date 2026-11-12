@@ -1,0 +1,9 @@
+{{define "content"}}
+<form method="post" action="/t/sayim" class="t-form" autocomplete="off">
+  {{template "csrf" .}}
+  <label for="hucre">Sayılacak hücreyi okutun</label>
+  <input id="hucre" name="hucre" type="text" class="t-code" autocapitalize="characters" autofocus>
+  <button type="submit" class="t-btn t-primary">Sayımı başlat</button>
+</form>
+<p class="t-note">Sayım kör yapılır: kayıttaki miktar gösterilmez. Raftaki her ürünü okutun; bitirince farklar stoğa işlenir. Kayıtta olup okutulmayan ürünler sıfırlanır.</p>
+{{end}}

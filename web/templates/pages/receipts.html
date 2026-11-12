@@ -1,0 +1,52 @@
+{{define "content"}}
+{{$d := .Data}}
+<div class="page-head">
+  <div>
+    <h1>Mal kabul</h1>
+    <p class="sub">{{.Scope.Label}}. Her kabul bir irsaliyedir; okutulan her satır anında stoğa girer.</p>
+  </div>
+  <div class="actions"><a class="btn btn-quiet" href="/t/kabul">Terminalde aç</a></div>
+</div>
+
+<details class="panel section no-print"{{if not $d.Receipts}} open{{end}}>
+  <summary><h2 class="inline-form">Yeni kabul</h2></summary>
+  <form method="post" action="/receipts" class="form-grid section" novalidate>
+    {{template "csrf" .}}
+    {{if not .Scope.Current}}
+    <div class="full">
+      <label for="warehouse_id">Depo</label>
+      <select id="warehouse_id" name="warehouse_id">{{range .Scope.Warehouses}}<option value="{{.ID}}">{{.Label}}</option>{{end}}</select>
+    </div>
+    {{end}}
+    <div><label for="supplier">Tedarikçi</label><input id="supplier" name="supplier" type="text" required maxlength="120"></div>
+    <div><label for="doc_no">İrsaliye no</label><input id="doc_no" name="doc_no" type="text" maxlength="40"></div>
+    <div class="full"><button class="btn" type="submit">Kabulü aç</button></div>
+  </form>
+</details>
+
+<ul class="tabs section" aria-label="Duruma göre">
+  <li><a href="/receipts"{{if $d.OpenOnly}} aria-current="page"{{end}}>Açık</a></li>
+  <li><a href="/receipts?tum=1"{{if not $d.OpenOnly}} aria-current="page"{{end}}>Tümü</a></li>
+</ul>
+
+<div class="table-wrap">
+  <table>
+    <thead><tr><th scope="col">Kod</th><th scope="col">Tedarikçi</th><th scope="col" class="hide-sm">İrsaliye</th><th scope="col">Depo</th><th scope="col" class="num">Çeşit</th><th scope="col">Durum</th><th scope="col" class="hide-sm">Açılış</th></tr></thead>
+    <tbody>
+      {{range $d.Receipts}}
+      <tr>
+        <td><a class="code" href="/receipts/{{.ID}}">{{.Code}}</a></td>
+        <td>{{.Supplier}}</td>
+        <td class="hide-sm code">{{.DocNo}}</td>
+        <td class="code">{{.WarehouseCode}}</td>
+        <td class="num">{{.Lines}}</td>
+        <td>{{if .Open}}<span class="tag tag-draft">Açık</span>{{else}}<span class="tag tag-delivered">Kapandı</span>{{end}}</td>
+        <td class="hide-sm small muted">{{datetime .CreatedAt}}</td>
+      </tr>
+      {{else}}
+      <tr><td colspan="7" class="empty">{{if $d.OpenOnly}}Açık kabul yok.{{else}}Henüz kabul yok.{{end}}</td></tr>
+      {{end}}
+    </tbody>
+  </table>
+</div>
+{{end}}

@@ -1,0 +1,10 @@
+{{define "content"}}
+<form method="post" action="/t/giris" class="t-form" autocomplete="off">
+  <label for="kullanici">Kullanıcı</label>
+  <input id="kullanici" name="kullanici" type="text" value="{{.Val "kullanici"}}" autocapitalize="none" autocorrect="off" spellcheck="false" data-next="pin" {{if not (.Val "kullanici")}}autofocus{{end}}>
+  <label for="pin">PIN</label>
+  <input id="pin" name="pin" type="password" inputmode="numeric" maxlength="8" {{if .Val "kullanici"}}autofocus{{end}}>
+  <button type="submit" class="t-btn t-primary">Giriş</button>
+</form>
+<p class="t-note">PIN'i yöneticiniz Ayarlar &gt; Kullanıcılar'dan verir. Yönetim paneli için bilgisayardan <a href="/login">parolayla girin</a>.</p>
+{{end}}

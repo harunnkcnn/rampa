@@ -1,0 +1,11 @@
+{{define "content"}}
+<div class="t-list">
+  {{range $i, $s := .Data}}
+  <a class="t-item" href="/t/paket/{{$s.ID}}" data-digit="{{add $i 1}}">
+    <span class="t-num">{{add $i 1}}</span><span class="t-item-main"><strong>{{$s.Customer}}</strong><small>{{$s.Code}} · {{$s.Status.Label}}</small></span>
+  </a>
+  {{else}}
+  <p class="t-note">Paketlenecek açık sevkiyat yok.</p>
+  {{end}}
+</div>
+{{end}}

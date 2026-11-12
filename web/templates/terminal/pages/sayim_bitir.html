@@ -1,0 +1,16 @@
+{{define "content"}}
+{{$c := .Data}}
+<p class="t-sub">Hücre {{$c.BinCode}}</p>
+{{with $c.Differences}}
+<h2 class="t-h2">Stoğa işlenecek farklar</h2>
+<table class="t-table">
+  <tr class="t-th"><td>Ürün</td><td class="t-n">Kayıt</td><td class="t-n">Sayılan</td><td class="t-n">Fark</td></tr>
+  {{range .}}<tr><td>{{.Name}}</td><td class="t-n">{{.Expected}}</td><td class="t-n">{{.Counted}}</td><td class="t-n {{if gt .Diff 0}}t-plus{{else}}t-minus{{end}}">{{signed .Diff}}</td></tr>{{end}}
+</table>
+{{else}}
+<p class="t-note">Sayılanlar kayıtla birebir aynı. Onaylarsanız sayım farksız kapanır.</p>
+{{end}}
+<form id="confirm" method="post" action="/t/sayim/{{$c.ID}}/bitir" class="t-actions">
+  {{template "csrf" .}}<button type="submit" class="t-btn t-primary">Onayla ve kaydet</button>
+</form>
+{{end}}
